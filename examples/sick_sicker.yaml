@@ -1,0 +1,55 @@
+# DARTH "Sick-Sicker" cohort state-transition model — base-case parameters.
+#
+# Source (verbatim, with line numbers in the upstream repo):
+#   github.com/DARTH-git/cohort-modeling-tutorial-intro
+#     analysis/cSTM_time_indep.R, lines 70-120  (general setup, rates,
+#                                                state rewards)
+#     analysis/cSTM_time_indep.R, lines 81-83   (discount rates)
+#   Alarid-Escudero F et al., "An Introductory Tutorial on Cohort
+#   State-Transition Models in R Using a Cost-Effectiveness Analysis
+#   Example", Medical Decision Making 2023; 43(1):3-20.
+#
+# Parameters are stored as RATES and hazard ratios (the form used by
+# DARTH), not hand-derived probabilities. The Sick-Sicker model is built
+# from this file via opencea.builders.build_darth_sick_sicker(), which
+# reproduces the DARTH rate-to-probability + transition construction
+# exactly. All four strategies (SoC, A, B, AB) are constructed from this
+# single parameter set.
+#
+# Units: all costs in USD; utilities are dimensionless QALY weights per
+# year; rates are per year.
+
+# ---- General setup -------------------------------------------------------
+cycle_length: 1.0    # one cycle = one year
+n_age_init: 25       # age at baseline
+n_age_max: 100       # maximum follow-up age  =>  n_cycles = 75
+
+# ---- Discount rates ------------------------------------------------------
+d_c: 0.03   # annual discount rate for costs
+d_e: 0.03   # annual discount rate for QALYs
+
+# ---- Transition rates (annual) and hazard ratios ------------------------
+r_HD:   0.002    # constant annual rate of dying when Healthy (all-cause mortality)
+r_HS1:  0.15     # annual rate of becoming Sick when Healthy
+r_S1H:  0.5      # annual rate of becoming Healthy when Sick
+r_S1S2: 0.105    # annual rate of becoming Sicker when Sick
+hr_S1:  3        # hazard ratio of death in Sick    vs Healthy
+hr_S2:  10       # hazard ratio of death in Sicker  vs Healthy
+
+# ---- Effectiveness of treatment B ---------------------------------------
+hr_S1S2_trtB: 0.6   # hazard ratio of S1->S2 transition under treatment B
+
+# ---- State rewards (annual) ---------------------------------------------
+# Costs (USD)
+c_H:    2000
+c_S1:   4000
+c_S2:   15000
+c_D:    0
+c_trtA: 12000   # add-on cost of treatment A while in S1 or S2
+c_trtB: 13000   # add-on cost of treatment B while in S1 or S2
+# Utilities (QALY weight per year)
+u_H:    1.0
+u_S1:   0.75
+u_S2:   0.5
+u_D:    0.0
+u_trtA: 0.95    # utility in S1 while receiving treatment A
