@@ -24,7 +24,15 @@ All four DARTH Sick-Sicker strategies (SoC, A, B, AB) reproduce the published ma
 - `opencea.plots` — Matplotlib (headless `Agg` backend) figures: cost-effectiveness plane scatter, CEAC, and cost-effectiveness frontier. Output is saved to file paths chosen by the caller.
 - `tests/test_psa.py` — Reproducibility under seed, per-parameter sample-mean recovery within Monte Carlo error, PSA mean cost / QALY within ~1-2% of the deterministic Table 5 totals (QALYs sit slightly low because `u_H` samples around 0.985 vs the deterministic 1.0), CEAC validity (row sums to 1, SoC dominates at WTP = 0, AB dominates at WTP = 200,000), and Strategy A dominated in expectation.
 
-Not yet implemented (later stages): one-way DSA / tornado, FastAPI backend, Streamlit / Next.js front end, CHEERS reporting, LLM "assumption critic".
+### Stage 3 — one-way deterministic sensitivity analysis (DSA) and tornado
+
+- `opencea.sensitivity` — One-way DSA runner. For each parameter, the runner sets the value to its low then its high (others held at base), rebuilds the model through the validated `build_darth_sick_sicker` builder, runs the deterministic engine, and records the outcome at each end. Returns a tidy `DSAResult` sorted by swing descending.
+- **Outcome of interest**: incremental net monetary benefit of a chosen comparator vs the baseline (SoC by default) at a fixed WTP (default $100k). NMB rather than ICER because ICERs flip sign and go undefined under parameter sweeps, making them unusable in a tornado. The comparator defaults to the strategy with the highest base-case NMB at the WTP (Strategy B at $100k for the DARTH model).
+- **Parameter ranges** are derived from the existing PSA distributions in `PSA_PARAM_SPECS` (default 2.5 / 97.5 percentiles, configurable). The range is extended to include the deterministic base value when it falls outside the percentile interval — relevant for `u_H`, whose deterministic value of 1.0 sits above the 97.5th percentile of `Beta(200, 3)`. The tightly specified lognormal HRs (sdlog 0.01-0.02) produce negligible swings, by construction; the tornado is correctly dominated by parameters with real uncertainty (`c_trtB`, `hr_S1S2_trtB`, `r_HD`, disease-progression rates, utilities).
+- `opencea.plots.plot_tornado` — Classic CEA tornado. Horizontal bars sorted by swing, centered on the base outcome, two-tone coloring distinguishes outcomes at the low vs high parameter value. Annotated with each parameter's low / high input value.
+- `tests/test_sensitivity.py` — Base-case consistency (DSA's `base_outcome` matches a direct engine run on the YAML), per-parameter bracketing of the base, descending-swing ordering, sensitivity ordering sanity (`c_trtB` swing > `hr_S1` swing by >100x), structural checks (Strategy-A-only parameters `c_trtA` and `u_trtA` have exactly zero swing in the B vs SoC comparison), and a tornado plot smoke test.
+
+Not yet implemented (later stages): FastAPI backend, Streamlit / Next.js front end, CHEERS reporting, LLM "assumption critic".
 
 ## Install
 
@@ -65,6 +73,19 @@ ceac = compute_ceac(psa, grid)                # DataFrame of P(cost-effective)
 plot_ceac(psa, "ceac.png", wtp_grid=grid)     # hero figure
 plot_ce_plane(psa, "ce_plane.png")
 plot_ce_frontier(psa, "frontier.png", wtp_grid=grid)
+```
+
+Run a one-way DSA and render the tornado:
+
+```python
+from opencea import run_dsa
+from opencea.plots import plot_tornado
+
+dsa = run_dsa("examples/sick_sicker.yaml", wtp=100_000)
+# dsa.comparator -> "Strategy B" (optimal vs SoC at $100k);
+# dsa.base_outcome -> ~$39,793 incremental NMB.
+print(dsa.to_dataframe().head())
+plot_tornado(dsa, "tornado.png")
 ```
 
 ## Reference model

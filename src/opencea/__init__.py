@@ -1,8 +1,9 @@
 """OpenCEA — open, reproducible health-economic decision modeling.
 
 Surface: Pydantic model spec, cohort simulation engine, basic CEA,
-probabilistic sensitivity analysis (PSA) with CEAC + frontier, and a
-matplotlib plotting layer for the CE plane, CEAC, and frontier figures.
+probabilistic sensitivity analysis (PSA) with CEAC + frontier, one-way
+deterministic sensitivity analysis (DSA) with tornado, and a matplotlib
+plotting layer for all figures.
 """
 from .model import CohortModel, Strategy
 from .engine import simulate_trace, evaluate_strategy, run_model, gen_wcc
@@ -20,8 +21,14 @@ from .psa import (
     run_psa,
     sample_psa_params,
 )
+from .sensitivity import (
+    DSAResult,
+    ParameterSweep,
+    compute_parameter_ranges,
+    run_dsa,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "CohortModel",
@@ -45,4 +52,8 @@ __all__ = [
     "incremental_vs_baseline",
     "run_psa",
     "sample_psa_params",
+    "DSAResult",
+    "ParameterSweep",
+    "compute_parameter_ranges",
+    "run_dsa",
 ]
