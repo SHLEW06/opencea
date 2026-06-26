@@ -1,8 +1,18 @@
 # OpenCEA
 
+[![CI](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
+
 > Open, reproducible health-economic decision modeling in Python.
 
 OpenCEA is an open-source Python toolkit for **cohort state-transition cost-effectiveness modeling**. It targets the gap left by R-only stacks (heemod, hesim, dampack) and proprietary tools (TreeAge) by providing a transparent, validated, vectorized engine in Python.
+
+## Validation & tests
+
+68 tests run on every push to `main` and on every pull request, across Python 3.10, 3.11, and 3.12:
+
+- **Deterministic golden tests** pinned to the published DARTH Sick-Sicker manuscript (Table 5 totals to the cent; Table 6 ICERs to the dollar).
+- **PSA structural tests** for sampler reproducibility, per-parameter Monte Carlo mean recovery, PSA-mean vs deterministic Table 5 within ~1-2%, and CEAC sanity at the WTP extremes.
+- **DSA structural tests** for base-case consistency with the validated engine, bracketing, swing ordering, and the tornado plot.
 
 ## Status
 
@@ -101,4 +111,4 @@ All four strategies (SoC, A, B, AB) are constructed from a single rate-based par
 
 ## License
 
-MIT.
+MIT. Copyright (c) 2026 Shunji Lewandowski. See [LICENSE](LICENSE).
