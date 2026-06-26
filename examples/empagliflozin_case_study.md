@@ -124,19 +124,65 @@ The CE plane scatter (`empa_ce_plane.png`) lies almost entirely in the upper-rig
 
 ---
 
+## Scenario analysis
+
+The base case sits *right at* the $100k/QALY threshold, so the conclusion turns on two assumptions flagged in the limitations: WAC drug pricing and lifetime extrapolation of the EMPA-REG mortality benefit. Both deserve explicit scenarios.
+
+### Scenarios
+
+- **Net price** — annual drug cost lowered to **$4,500/yr**, illustrative of a typical ~28% rebate off the $6,264 WAC. *Real net prices are confidential and vary by payer*; this is a single round number, not a quotation.
+- **Treatment-effect waning** — both `hr_event` and `hr_death` are held at their trial point estimates for the first **3 years** (EMPA-REG follow-up), then linearly interpolated to **HR = 1.0 by year 10**, then no effect for the remaining 27 cycles. Implemented via a per-cycle transition-matrix sequence; the time-homogeneous engine path is untouched (a regression test confirms the sequence helper reduces to the validated `evaluate_strategy` when fed a stack of identical matrices).
+
+### Scenario grid (n_sim = 10,000)
+
+| Scenario | ICER ($/QALY) | P(CE at $100k) |
+|---|---:|---:|
+| Base case (WAC, sustained effect) | **98,900** | **0.517** |
+| Net price ($4,500/yr, sustained) | 77,564 | 0.920 |
+| Waning effect (WAC) | 206,778 | 0.005 |
+| Waning + net price | 154,665 | 0.001 |
+
+### Breakeven price
+
+The annual empagliflozin price at which the deterministic ICER equals exactly $100k/QALY:
+
+| Effect assumption | Breakeven price (USD/yr) |
+|---|---:|
+| Sustained effect | **6,355** |
+| Waning effect | **2,650** |
+
+Read: under the sustained-effect base case, empagliflozin would need to come in below $6,355/yr (a ~1% rebate off WAC) to clear $100k/QALY. Under waning, the price would need to fall by **~58%** off WAC to clear the same threshold.
+
+### Interpretation
+
+The two assumptions move in opposite directions and the size of the move is asymmetric. The net-price scenario reduces incremental cost by roughly the discounted lifetime drug-cost differential (~$37k) and pulls the ICER 21% below the base case. Waning, in contrast, eliminates most of the long-run mortality benefit — the incremental QALY gain drops from 1.39 to about 0.49 (a ~65% reduction). Cost savings from fewer high-cost PE years partially offset this, but not enough; the waning ICER more than doubles.
+
+The combined scenario shows that **rebates alone do not rescue a waning-effect interpretation** of the trial. If the EMPA-REG mortality benefit truly persists for life, empagliflozin is cost-effective at $100k/QALY at WAC (with healthy PSA support — 52% at WAC, 92% at $4,500 net). If the mortality benefit fades within ~10 years, the drug is not cost-effective at $100k/QALY even after a ~28% rebate — and would need to drop below ~$2,650/yr to clear the threshold.
+
+The cost-effectiveness conclusion is therefore **conditional on the durability of the EMPA-REG all-cause mortality benefit, not on drug pricing**. Trial-effect durability — not the price — is the dominant uncertainty.
+
+---
+
 ## Limitations
 
 The user spec explicitly framed this as an **illustrative** model. Limitations material to the result:
 
 1. **Aggregated event state.** MI, stroke, and HF are collapsed into a single "PE" state with a blended ongoing cost, acute cost, and utility. Published US empagliflozin CEAs in the **$26k - $88k / QALY** range typically separate these (often into 4-6 states), which yields a tighter cost ledger and different mortality trajectories for each event type.
 2. **Cohort, not microsimulation.** No individual heterogeneity, no time since first event, no second-event modeling. The 60/40 MI-stroke vs HF blend is fixed at the trial composition forever — in reality the mix would evolve with age and prior events.
-3. **Lifetime extrapolation of trial-derived HRs.** EMPA-REG OUTCOME measured outcomes over a median 3.1 years. Both HRs (`hr_event` = 0.86, `hr_death` = 0.68) are applied for all 37 cycles. Real-world evidence on duration of effect is mixed.
-4. **All-cause mortality HR applied to PE→D.** The trial measured HR 0.68 in the trial population (which started event-free). Applying that HR to post-event mortality is a strong assumption — the DSA shows it's the single largest driver of incremental NMB.
-5. **WAC drug price.** $6,264/yr is the listed wholesale price. Most US payers see meaningfully lower **net** prices after rebates, which would shift the ICER below $80k.
+3. **Lifetime extrapolation of trial-derived HRs.** EMPA-REG OUTCOME measured outcomes over a median 3.1 years. The base case applies both HRs (`hr_event` = 0.86, `hr_death` = 0.68) for all 37 cycles. The **waning scenario** above quantifies the impact of that assumption — the deterministic ICER more than doubles, from $98,900 to $206,778/QALY, when the effect is allowed to taper to zero by year 10.
+4. **All-cause mortality HR applied to PE→D.** The trial measured HR 0.68 in the trial population (which started event-free). Applying that HR to post-event mortality is a strong assumption — the DSA shows it's the single largest driver of incremental NMB, with a tornado bar that straddles zero across the trial's 95% CI.
+5. **WAC drug price.** $6,264/yr is the listed wholesale price. Most US payers see meaningfully lower **net** prices after rebates; the net-price scenario above shows that a $4,500/yr price (~28% rebate) lowers the ICER to $77,564/QALY under sustained effect. Real net prices are confidential.
 6. **No adverse-event modeling.** Genital infections (the most notable EMPA-REG side effect) and DKA risk are not separately costed.
-7. **Linear time-homogeneity.** Rates do not change with age, time since diagnosis, or cumulative drug exposure.
+7. **Linear time-homogeneity in baseline rates.** SoC rates do not change with age, time since diagnosis, or cumulative drug exposure. (The Empa transition matrix can vary per cycle via the additive sequence engine — used here for waning.)
 
-The deterministic ICER ($98,900 / QALY) lands a little above the typical published US range (~$26k - $88k / QALY). Two structural choices explain the difference: WAC drug pricing and the 3-state aggregation. The conclusion is that **at WAC pricing and under the parameterization above, empagliflozin is right at the edge of cost-effectiveness at a $100k / QALY threshold and decisively cost-effective at $150k**. Drug rebates of ~20% would alone bring the ICER under $80k.
+## Bottom line
+
+The base-case ICER ($98,900/QALY) lands at the upper end of plausibility, just below a $100k WTP. The scenario grid makes the driver of that conclusion explicit:
+
+- **If the EMPA-REG mortality benefit is sustained**, empagliflozin is cost-effective at $100k/QALY at WAC pricing (with PSA support of ~52% rising to ~92% at a $4,500 net price).
+- **If the effect wanes** (linearly to zero between years 3 and 10), the ICER rises above $200k/QALY at WAC and stays above $150k/QALY even at a $4,500 net price.
+
+The dominant uncertainty is therefore the **durability of the all-cause mortality benefit**, not drug pricing. Two structural choices distinguish this analysis from the central published $26-88k/QALY range: WAC drug pricing (relaxed in the net-price scenario) and the 3-state aggregation (left in place as an illustrative simplification).
 
 ---
 
@@ -153,14 +199,17 @@ To regenerate:
 
 ```python
 from opencea.empagliflozin import (
-    evaluate_empagliflozin_case, run_empa_psa, dsa_evaluator,
-    EMPA_PSA_SPECS, EMPA_DSA_RANGE_OVERRIDES, SOC,
+    evaluate_empagliflozin_case, run_empa_psa, run_empa_psa_scenario,
+    scenario_icer, breakeven_drug_price, WaningSpec,
+    dsa_evaluator, EMPA_PSA_SPECS, EMPA_DSA_RANGE_OVERRIDES, SOC,
 )
 from opencea.sensitivity import run_dsa
 from opencea.plots import plot_tornado, plot_ceac, plot_ce_plane, plot_ce_frontier
 from opencea.psa import default_wtp_grid
 
 YAML = "examples/empagliflozin_t2d.yaml"
+
+# Base-case figures
 psa = run_empa_psa(YAML, n_sim=10_000, seed=20260626)
 dsa = run_dsa(
     base_params=YAML, wtp=100_000, baseline=SOC,
@@ -172,6 +221,18 @@ plot_tornado(dsa, "examples/figures/empa_tornado.png")
 plot_ceac(psa, "examples/figures/empa_ceac.png", wtp_grid=default_wtp_grid())
 plot_ce_plane(psa, "examples/figures/empa_ce_plane.png")
 plot_ce_frontier(psa, "examples/figures/empa_ce_frontier.png")
+
+# Scenarios
+waning = WaningSpec(start_year=3.0, end_year=10.0)
+for label, dp, wan in [
+    ("net_price",    4500.0, None),
+    ("waning",        None,  waning),
+    ("waning_net",  4500.0, waning),
+]:
+    icer = scenario_icer(YAML, drug_price=dp, waning=wan)
+    print(f"{label}: ICER ${icer:,.0f}/QALY")
+print(f"Breakeven (sustained): ${breakeven_drug_price(YAML, 100_000):,.2f}/yr")
+print(f"Breakeven (waning):    ${breakeven_drug_price(YAML, 100_000, waning=waning):,.2f}/yr")
 ```
 
 ---

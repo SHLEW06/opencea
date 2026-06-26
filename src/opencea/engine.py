@@ -148,3 +148,97 @@ def evaluate_strategy(strategy: Strategy, model: CohortModel) -> Dict[str, objec
 def run_model(model: CohortModel) -> List[Dict[str, object]]:
     """Evaluate every strategy in the model and return their results."""
     return [evaluate_strategy(s, model) for s in model.strategies]
+
+
+# ---------------------------------------------------------------------------
+# Time-varying transitions (additive helpers)
+#
+# The Strategy / CohortModel schema is intentionally time-homogeneous (one
+# transition matrix per strategy). These helpers add the minimum needed to
+# evaluate a strategy whose transition matrix varies per cycle — used by
+# the empagliflozin case study to model treatment-effect waning. The
+# validated time-homogeneous path above is untouched.
+# ---------------------------------------------------------------------------
+
+
+def simulate_trace_sequence(
+    transition_sequence: np.ndarray,
+    initial_distribution: np.ndarray,
+) -> np.ndarray:
+    """Cohort trace under a per-cycle sequence of transition matrices.
+
+    Parameters
+    ----------
+    transition_sequence
+        Array of shape ``(n_cycles, n_states, n_states)``. ``P[t]`` is
+        the transition matrix applied during cycle ``t`` (i.e., the one
+        that takes ``trace[t]`` to ``trace[t + 1]``).
+    initial_distribution
+        Shape ``(n_states,)``.
+
+    Returns
+    -------
+    np.ndarray
+        Shape ``(n_cycles + 1, n_states)``, same convention as
+        :func:`simulate_trace`.
+    """
+    Pseq = np.asarray(transition_sequence, dtype=float)
+    if Pseq.ndim != 3 or Pseq.shape[1] != Pseq.shape[2]:
+        raise ValueError(
+            f"transition_sequence must have shape (T, n, n); got {Pseq.shape}"
+        )
+    init = np.asarray(initial_distribution, dtype=float)
+    n_cycles, n_states, _ = Pseq.shape
+    if init.size != n_states:
+        raise ValueError(
+            f"initial_distribution has {init.size} entries; expected {n_states}"
+        )
+
+    trace = np.empty((n_cycles + 1, n_states), dtype=float)
+    trace[0] = init
+    for t in range(n_cycles):
+        trace[t + 1] = trace[t] @ Pseq[t]
+    return trace
+
+
+def evaluate_sequence(
+    name: str,
+    transition_sequence: np.ndarray,
+    state_costs: np.ndarray,
+    state_utilities: np.ndarray,
+    initial_distribution: np.ndarray,
+    cycle_length: float,
+    discount_rate_costs: float,
+    discount_rate_qalys: float,
+    wcc_method: WCCMethod = "simpson_1_3",
+) -> Dict[str, object]:
+    """Time-varying analogue of :func:`evaluate_strategy`.
+
+    Uses the same per-cycle reward / discount / WCC accumulation as the
+    time-homogeneous evaluator so totals are directly comparable when
+    ``transition_sequence`` happens to be a stack of identical matrices.
+    """
+    trace = simulate_trace_sequence(transition_sequence, initial_distribution)
+    n_cycles = trace.shape[0] - 1
+
+    costs = np.asarray(state_costs, dtype=float)
+    utilities = np.asarray(state_utilities, dtype=float)
+
+    cycle_costs = trace @ (costs * cycle_length)
+    cycle_qalys = trace @ (utilities * cycle_length)
+
+    dw_c = _discount_weights(discount_rate_costs, n_cycles, cycle_length)
+    dw_e = _discount_weights(discount_rate_qalys, n_cycles, cycle_length)
+    wcc = gen_wcc(n_cycles, wcc_method)
+
+    total_cost = float(np.sum(cycle_costs * dw_c * wcc))
+    total_qaly = float(np.sum(cycle_qalys * dw_e * wcc))
+
+    return {
+        "name": name,
+        "trace": trace,
+        "cycle_costs": cycle_costs,
+        "cycle_qalys": cycle_qalys,
+        "total_cost": total_cost,
+        "total_qaly": total_qaly,
+    }

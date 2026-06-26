@@ -36,11 +36,21 @@ from opencea.empagliflozin import (
     SOC,
     STATES,
     STRATEGY_NAMES,
+    WaningSpec,
+    breakeven_drug_price,
     build_empagliflozin_t2d,
     case_results_for_cea,
     dsa_evaluator,
     evaluate_empagliflozin_case,
+    evaluate_scenario,
     run_empa_psa,
+    run_empa_psa_scenario,
+    scenario_icer,
+)
+from opencea.engine import (
+    evaluate_sequence,
+    evaluate_strategy as engine_evaluate_strategy,
+    simulate_trace_sequence,
 )
 from opencea.engine import evaluate_strategy, run_model
 from opencea.psa import compute_ceac, default_wtp_grid
@@ -330,3 +340,208 @@ def test_case_study_figures_render(psa, dsa, tmp_path):
     p4 = plot_tornado(dsa, tmp_path / "tornado.png")
     for p in (p1, p2, p3, p4):
         assert p.exists() and p.stat().st_size > 0
+
+
+# ---------------------------------------------------------------------------
+# 7. Scenario analysis: net price, treatment-effect waning, breakeven
+# ---------------------------------------------------------------------------
+
+
+NET_PRICE = 4_500.0
+WANING = WaningSpec(start_year=3.0, end_year=10.0)
+
+
+@pytest.fixture(scope="module")
+def base_icer(case):
+    return icer(
+        case[SOC]["total_cost"], case[SOC]["total_qaly"],
+        case[EMPA]["total_cost"], case[EMPA]["total_qaly"],
+    )
+
+
+def test_engine_sequence_reduces_to_time_homogeneous(model_pair):
+    """The additive time-varying engine helpers must reduce to the
+    time-homogeneous evaluator when fed a stack of identical matrices —
+    so the new path doesn't drift from the validated engine.
+    """
+    model, _ = model_pair
+    strat = next(s for s in model.strategies if s.name == EMPA)
+    direct = engine_evaluate_strategy(strat, model)
+
+    P = np.asarray(strat.transition_matrix, dtype=float)
+    P_seq = np.broadcast_to(P, (model.time_horizon, *P.shape)).copy()
+    seq = evaluate_sequence(
+        name=strat.name,
+        transition_sequence=P_seq,
+        state_costs=np.asarray(strat.state_costs, dtype=float),
+        state_utilities=np.asarray(strat.state_utilities, dtype=float),
+        initial_distribution=np.array(model.initial_distribution, dtype=float),
+        cycle_length=model.cycle_length,
+        discount_rate_costs=model.discount_rate_costs,
+        discount_rate_qalys=model.discount_rate_qalys,
+        wcc_method=model.wcc_method,
+    )
+    assert seq["total_cost"] == pytest.approx(direct["total_cost"], abs=1e-9)
+    assert seq["total_qaly"] == pytest.approx(direct["total_qaly"], abs=1e-9)
+    np.testing.assert_allclose(seq["trace"], direct["trace"], atol=1e-12)
+
+
+def test_simulate_trace_sequence_rejects_bad_shapes():
+    """Catch a malformed transition tensor early — better than a silent
+    propagation through numpy."""
+    init = np.array([1.0, 0.0, 0.0])
+    with pytest.raises(ValueError):
+        simulate_trace_sequence(np.zeros((5, 3, 2)), init)
+    with pytest.raises(ValueError):
+        simulate_trace_sequence(np.zeros((5, 3, 3)), np.zeros(2))
+
+
+def test_waning_spec_clipped_to_unit_interval():
+    """effect_fraction must be 1 before start_year and 0 after end_year."""
+    w = WaningSpec(3.0, 10.0)
+    t = np.array([0.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0])
+    frac = w.effect_fraction(t)
+    np.testing.assert_allclose(frac[:3], 1.0)        # t <= start_year
+    assert 0.0 < frac[3] < 1.0                        # interpolated
+    assert 0.0 < frac[4] < 1.0
+    np.testing.assert_allclose(frac[5:], 0.0)         # t >= end_year
+
+
+def test_waning_hr_path_endpoints():
+    """HR(t) = base before start_year, 1.0 after end_year."""
+    w = WaningSpec(3.0, 10.0)
+    hr_base = 0.68
+    t = np.array([0.0, 3.0, 10.0, 30.0])
+    path = w.hr_path(hr_base, t)
+    assert path[0] == pytest.approx(hr_base)
+    assert path[1] == pytest.approx(hr_base)
+    assert path[2] == pytest.approx(1.0)
+    assert path[3] == pytest.approx(1.0)
+
+
+# --- Deterministic scenario directional checks ----------------------------
+
+
+def test_evaluate_scenario_sustained_matches_base(case):
+    """``evaluate_scenario`` with no overrides must reproduce
+    :func:`evaluate_empagliflozin_case` exactly."""
+    out = evaluate_scenario(YAML_PATH)
+    for name in STRATEGY_NAMES:
+        assert out[name]["total_cost"] == pytest.approx(case[name]["total_cost"], abs=1e-9)
+        assert out[name]["total_qaly"] == pytest.approx(case[name]["total_qaly"], abs=1e-9)
+
+
+def test_net_price_lowers_icer(base_icer):
+    """Lower drug price -> lower incremental cost -> lower ICER."""
+    icer_net = scenario_icer(YAML_PATH, drug_price=NET_PRICE)
+    assert np.isfinite(icer_net)
+    assert icer_net < base_icer
+
+
+def test_waning_raises_icer(base_icer):
+    """Smaller QALY gain at the same cost -> higher ICER."""
+    icer_wan = scenario_icer(YAML_PATH, waning=WANING)
+    assert np.isfinite(icer_wan)
+    assert icer_wan > base_icer
+
+
+def test_waning_reduces_incremental_qalys(case):
+    """Sanity: turning off the long-tail mortality benefit cuts the QALY
+    gain — Empa's incremental QALY under waning must be strictly less
+    than under sustained effect."""
+    out_wan = evaluate_scenario(YAML_PATH, waning=WANING)
+    inc_qaly_sustained = case[EMPA]["total_qaly"] - case[SOC]["total_qaly"]
+    inc_qaly_waning = out_wan[EMPA]["total_qaly"] - out_wan[SOC]["total_qaly"]
+    assert inc_qaly_waning > 0
+    assert inc_qaly_waning < inc_qaly_sustained
+
+
+def test_combined_scenario_between_components(base_icer):
+    """ICER under waning + net price should sit between the two extreme
+    scenarios in the natural ordering: net-only < base < waning+net < waning."""
+    icer_net = scenario_icer(YAML_PATH, drug_price=NET_PRICE)
+    icer_wan = scenario_icer(YAML_PATH, waning=WANING)
+    icer_both = scenario_icer(YAML_PATH, drug_price=NET_PRICE, waning=WANING)
+    assert icer_net < base_icer
+    assert icer_both > base_icer       # waning dominates the net-price benefit
+    assert icer_both < icer_wan        # but the net price still helps
+
+
+# --- Breakeven --------------------------------------------------------------
+
+
+def test_breakeven_recovers_target_icer():
+    """``breakeven_drug_price`` must yield an ICER within a dollar of the
+    target (default $100k)."""
+    target = 100_000.0
+    price = breakeven_drug_price(YAML_PATH, target_icer=target)
+    assert np.isfinite(price) and price > 0
+    achieved = scenario_icer(YAML_PATH, drug_price=price)
+    assert achieved == pytest.approx(target, abs=2.0)
+
+
+def test_breakeven_under_waning_is_lower_than_sustained():
+    """A model with waning gives fewer QALYs per dollar of drug spend,
+    so the price needed to hit $100k/QALY must be lower under waning."""
+    p_sust = breakeven_drug_price(YAML_PATH, target_icer=100_000.0)
+    p_wan = breakeven_drug_price(YAML_PATH, target_icer=100_000.0, waning=WANING)
+    assert p_wan < p_sust
+
+
+# --- Scenario PSA / CEAC ---------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def psa_net_price():
+    return run_empa_psa_scenario(
+        YAML_PATH, n_sim=3_000, seed=42, drug_price=NET_PRICE
+    )
+
+
+@pytest.fixture(scope="module")
+def psa_waning():
+    return run_empa_psa_scenario(
+        YAML_PATH, n_sim=3_000, seed=42, waning=WANING
+    )
+
+
+@pytest.fixture(scope="module")
+def psa_both():
+    return run_empa_psa_scenario(
+        YAML_PATH, n_sim=3_000, seed=42, drug_price=NET_PRICE, waning=WANING
+    )
+
+
+def test_scenario_psa_reproducible_under_seed():
+    a = run_empa_psa_scenario(YAML_PATH, n_sim=500, seed=7, waning=WANING)
+    b = run_empa_psa_scenario(YAML_PATH, n_sim=500, seed=7, waning=WANING)
+    pd.testing.assert_frame_equal(a.costs, b.costs)
+    pd.testing.assert_frame_equal(a.qalys, b.qalys)
+
+
+def test_scenario_psa_ceac_directions(psa, psa_net_price, psa_waning):
+    """P(CE at $100k) ordering must mirror the deterministic ICER ordering:
+    net price > sustained > waning."""
+    grid = default_wtp_grid()
+    p_sustained = float(compute_ceac(psa, grid).loc[100_000.0, EMPA])
+    p_net = float(compute_ceac(psa_net_price, grid).loc[100_000.0, EMPA])
+    p_wan = float(compute_ceac(psa_waning, grid).loc[100_000.0, EMPA])
+    assert p_net > p_sustained
+    assert p_wan < p_sustained
+
+
+def test_scenario_psa_ceac_is_valid(psa_net_price, psa_waning, psa_both):
+    """All four scenarios must produce a valid CEAC (entries in [0, 1],
+    rows sum to 1)."""
+    grid = default_wtp_grid()
+    for r in (psa_net_price, psa_waning, psa_both):
+        ceac = compute_ceac(r, grid)
+        arr = ceac.to_numpy()
+        assert (arr >= 0).all() and (arr <= 1).all()
+        np.testing.assert_allclose(arr.sum(axis=1), 1.0, atol=1e-12)
+
+
+def test_waning_psa_mean_qalys_less_than_sustained(psa, psa_waning):
+    """Mean Empa QALY under waning should be lower than under sustained
+    effect (the QALY benefit channel is partially turned off)."""
+    assert float(psa_waning.qalys[EMPA].mean()) < float(psa.qalys[EMPA].mean())

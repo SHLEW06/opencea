@@ -32,12 +32,18 @@ from .empagliflozin import (
     EMPA_DSA_RANGE_OVERRIDES,
     EMPA_PSA_SPECS,
     SOC,
+    WaningSpec,
+    breakeven_drug_price,
     build_empagliflozin_t2d,
     case_results_for_cea,
     dsa_evaluator,
     evaluate_empagliflozin_case,
+    evaluate_scenario,
     run_empa_psa,
+    run_empa_psa_scenario,
+    scenario_icer,
 )
+from .engine import evaluate_sequence, simulate_trace_sequence
 
 __version__ = "0.4.0"
 
@@ -71,9 +77,16 @@ __all__ = [
     "EMPA",
     "EMPA_PSA_SPECS",
     "EMPA_DSA_RANGE_OVERRIDES",
+    "WaningSpec",
+    "breakeven_drug_price",
     "build_empagliflozin_t2d",
     "case_results_for_cea",
     "dsa_evaluator",
     "evaluate_empagliflozin_case",
+    "evaluate_scenario",
     "run_empa_psa",
+    "run_empa_psa_scenario",
+    "scenario_icer",
+    "evaluate_sequence",
+    "simulate_trace_sequence",
 ]
