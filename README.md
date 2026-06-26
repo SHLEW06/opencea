@@ -8,11 +8,12 @@ OpenCEA is an open-source Python toolkit for **cohort state-transition cost-effe
 
 ## Validation & tests
 
-68 tests run on every push to `main` and on every pull request, across Python 3.10, 3.11, and 3.12:
+92 tests run on every push to `main` and on every pull request, across Python 3.10, 3.11, and 3.12:
 
 - **Deterministic golden tests** pinned to the published DARTH Sick-Sicker manuscript (Table 5 totals to the cent; Table 6 ICERs to the dollar).
 - **PSA structural tests** for sampler reproducibility, per-parameter Monte Carlo mean recovery, PSA-mean vs deterministic Table 5 within ~1-2%, and CEAC sanity at the WTP extremes.
 - **DSA structural tests** for base-case consistency with the validated engine, bracketing, swing ordering, and the tornado plot.
+- **Empagliflozin case-study tests** for structural integrity, evaluator-vs-engine consistency, ICER sanity, DSA tornado sanity, PSA reproducibility, and figure rendering.
 
 ## Status
 
@@ -42,7 +43,15 @@ All four DARTH Sick-Sicker strategies (SoC, A, B, AB) reproduce the published ma
 - `opencea.plots.plot_tornado` — Classic CEA tornado. Horizontal bars sorted by swing, centered on the base outcome, two-tone coloring distinguishes outcomes at the low vs high parameter value. Annotated with each parameter's low / high input value.
 - `tests/test_sensitivity.py` — Base-case consistency (DSA's `base_outcome` matches a direct engine run on the YAML), per-parameter bracketing of the base, descending-swing ordering, sensitivity ordering sanity (`c_trtB` swing > `hr_S1` swing by >100x), structural checks (Strategy-A-only parameters `c_trtA` and `u_trtA` have exactly zero swing in the B vs SoC comparison), and a tornado plot smoke test.
 
-Not yet implemented (later stages): FastAPI backend, Streamlit / Next.js front end, CHEERS reporting, LLM "assumption critic".
+### Stage 4 — applied case study: empagliflozin vs SoC in T2D + CVD
+
+- `opencea.empagliflozin` — Illustrative 3-state (EF / PE / D), 2-strategy (SoC, Empagliflozin) cohort cost-effectiveness model anchored on EMPA-REG OUTCOME (Zinman 2015). Reuses `rate_to_prob`, the competing-risks construction, the engine, the discount + WCC weights, the PSA sampler, the DSA driver, and the plotting layer — nothing in the simulation logic is reimplemented. The one-time acute-event cost on transitioning EF → PE is implemented as a transition cost discounted at the engine's `dw_c * wcc` weight.
+- `examples/empagliflozin_t2d.yaml` — Every parameter cited inline (EMPA-REG OUTCOME rates / HRs, ADA / Red Book / MEPS / Nicholson 2016 costs, UKPDS 62 / Janssen 2022 utilities).
+- `examples/empagliflozin_case_study.md` — CHEERS-structured writeup: decision problem, two-channel effect rationale, parameter table with citations, deterministic ICER (~$98,900 / QALY), tornado top drivers (`hr_death`, `c_drug`, `hr_event`), CEAC at $100k (~52% probability cost-effective), and an explicit limitations section (illustrative model, aggregated CV event state, cohort vs microsimulation, WAC pricing).
+- `examples/figures/empa_*.png` — generated tornado, CEAC, CE plane, and frontier figures.
+- `tests/test_empagliflozin_case.py` — 24 tests: structural integrity (states, row-stochastic matrices, PE non-recovery), base-case consistency tying the case evaluator back to a direct engine call, ICER sanity-band check (\$20k - \$120k / QALY — wider than the central published \$26 - 88k range to allow the illustrative model's 3-state aggregation and WAC pricing), DSA structural sanity, PSA reproducibility, and plot smoke.
+
+Not yet implemented (later stages): FastAPI backend, Streamlit / Next.js front end, LLM "assumption critic".
 
 ## Install
 

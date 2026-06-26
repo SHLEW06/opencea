@@ -27,8 +27,19 @@ from .sensitivity import (
     compute_parameter_ranges,
     run_dsa,
 )
+from .empagliflozin import (
+    EMPA,
+    EMPA_DSA_RANGE_OVERRIDES,
+    EMPA_PSA_SPECS,
+    SOC,
+    build_empagliflozin_t2d,
+    case_results_for_cea,
+    dsa_evaluator,
+    evaluate_empagliflozin_case,
+    run_empa_psa,
+)
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "CohortModel",
@@ -56,4 +67,13 @@ __all__ = [
     "ParameterSweep",
     "compute_parameter_ranges",
     "run_dsa",
+    "SOC",
+    "EMPA",
+    "EMPA_PSA_SPECS",
+    "EMPA_DSA_RANGE_OVERRIDES",
+    "build_empagliflozin_t2d",
+    "case_results_for_cea",
+    "dsa_evaluator",
+    "evaluate_empagliflozin_case",
+    "run_empa_psa",
 ]

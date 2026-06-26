@@ -1,0 +1,120 @@
+# Empagliflozin vs Standard of Care in T2D with established cardiovascular
+# disease — illustrative case study.
+#
+# Anchor trial: EMPA-REG OUTCOME
+#   Zinman B, Wanner C, Lachin JM, et al. Empagliflozin, Cardiovascular
+#   Outcomes, and Mortality in Type 2 Diabetes. N Engl J Med 2015;
+#   373:2117-2128. (n = 7,020; median 3.1 yr follow-up.)
+#
+# Every parameter below carries the source it was taken from. Rates are
+# expressed in /year. Trial cumulative event rates over the 3.1 yr
+# follow-up are converted to constant annual rates via
+#     r = -ln(1 - p) / 3.1
+#
+# This is an ILLUSTRATIVE model — it aggregates MI / stroke / HF
+# hospitalization into one "post-event" health state and uses a cohort
+# (rather than microsimulation) structure. Limitations are spelled out in
+# examples/empagliflozin_case_study.md.
+
+# ---- General setup -------------------------------------------------------
+cycle_length: 1.0    # one cycle = one year
+n_age_init: 63       # mean age in EMPA-REG OUTCOME placebo arm
+n_age_max:  100      # follow-up to age 100  =>  n_cycles = 37
+
+# ---- Discount rates ------------------------------------------------------
+d_c: 0.03
+d_e: 0.03
+
+# ---- Baseline event rates (Standard of care) ----------------------------
+#
+# r_EF_PE   First major non-fatal CV event (combined nonfatal MI / stroke
+#           + first HF hospitalization).
+#           Trial placebo arm (Zinman 2015, Tables 2 / S5):
+#             nonfatal MI + stroke  = MACE 12.1%  -  CV death 5.9%  = 6.2%
+#             HF hospitalization                                   = 4.1%
+#             total over 3.1 yr                                    = 10.3%
+#           Annual rate:  -ln(1 - 0.103) / 3.1  =  0.0351 / yr
+r_EF_PE: 0.0351
+#
+# r_EF_D    Event-free mortality proxy. Uses the trial CV death rate
+#           (5.9% over 3.1 yr in the placebo arm, Zinman 2015 Table 2).
+#           Annual rate:  -ln(1 - 0.059) / 3.1  =  0.0196 / yr
+r_EF_D: 0.0196
+#
+# r_PE_D    Post-event mortality. Blended 60/40 across MI/stroke vs HF
+#           hospitalization, mirroring the EMPA-REG event composition:
+#             post-MI/stroke  ~  5.5 % / yr  (Brinkert M et al., Am J
+#                                Cardiol 2017; long-term diabetes-cohort
+#                                survival after MI / stroke)
+#             post-HF         ~ 10.0 % / yr  (US registry meta-data;
+#                                heart-failure 1-yr mortality typically
+#                                quoted near 22-30%, declining in later
+#                                years; conservative blended estimate
+#                                used here)
+#             blend  =  0.60 * 0.055  +  0.40 * 0.10  =  0.063
+#           Rounded to 0.06 / yr. SOFT input — sensitivity-tested over
+#           0.04 - 0.10 / yr.
+r_PE_D: 0.06
+
+# ---- Treatment effect of empagliflozin ----------------------------------
+#
+# hr_event  Composite EF->PE hazard ratio. Constructed from the EMPA-REG
+#           component HRs weighted by their share of the composite event:
+#             0.60 * 1.00  (MI / stroke; no significant trial effect,
+#                          3-point MACE HR 0.86 driven by CV death)
+#           + 0.40 * 0.65  (HF hospitalization HR 0.65, 95% CI 0.50-0.85;
+#                          Zinman 2015 Table 2)
+#           = 0.86. 95% CI for the composite (mapped from the MACE
+#             primary HR 0.86 [0.74 - 0.99]).
+hr_event: 0.86
+#
+# hr_death  All-cause mortality hazard ratio in the trial.
+#           HR 0.68 (95% CI 0.57 - 0.82). Zinman 2015 Table 2.
+#           Applied to both EF -> D and PE -> D rates.
+hr_death: 0.68
+
+# ---- State costs (annual, USD) ------------------------------------------
+#
+# c_drug   Empagliflozin acquisition cost. $522 / month WAC (Red Book;
+#          cited in the JAHA 2024 CEA of SGLT2is). Annualized to
+#          $6,264 / yr. Sensitivity range $4,872 (FSS $406/mo)
+#          - $7,596 (AWP $633/mo).
+c_drug: 6264
+#
+# c_EF     Annual cost of remaining in the event-free T2D + CVD state.
+#          Aligned with the ADA Economic Costs of Diabetes Care 2022:
+#          $19,736 total / $12,022 excess per person-year. Base case
+#          $16,000; sensitivity range $13,000 - $19,700.
+c_EF: 16000
+#
+# c_PE     Annual ongoing cost in the post-event state. 60 / 40 blend of
+#          chronic post-MI/stroke care (~$13k/yr) and post-HF care
+#          (~$30k/yr) from MEPS-based cost-of-illness reviews (medRxiv
+#          2025 review of cardiovascular CEAs). Base case $20,000 / yr.
+c_PE: 20000
+#
+# c_acute_PE  One-time acute-event cost incurred on transitioning EF -> PE
+#             (averaged across MI $11,664 / stroke $11,635 / HF $11,686;
+#             Nicholson G et al., 2016 acute-care cost study). Base
+#             $11,650. Implemented as a transition cost: discounted with
+#             the engine's cost discount + WCC weights at the cycle the
+#             entrants arrive in PE.
+c_acute_PE: 11650
+#
+c_D: 0
+
+# ---- State utilities (EQ-5D weights) ------------------------------------
+#
+# u_EF   Pooled EQ-5D utility for adults with T2D from the Janssen 2022
+#        meta-analysis (~0.772), aligned downward to 0.75 to reflect the
+#        established-CVD subpopulation (UKPDS 62 baseline ~0.785 net of
+#        comorbidity decrements).
+u_EF: 0.75
+#
+# u_PE   Post-event utility. UKPDS 62 event decrements (Clarke et al.,
+#        Med Decis Making 2002): MI -0.055, stroke -0.164, HF -0.108
+#        from a ~0.785 baseline. Weighted by the 60 / 40 composite gives
+#        an average decrement near -0.105 -> 0.68.
+u_PE: 0.68
+#
+u_D: 0.0

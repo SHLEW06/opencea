@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -32,6 +32,9 @@ from .builders import build_darth_sick_sicker
 from .cea import nmb as _nmb
 from .engine import run_model
 from .psa import PSA_PARAM_SPECS, DistSpec, sample_psa_params
+
+
+EvaluatorFn = Callable[[Mapping[str, Any]], Dict[str, Dict[str, float]]]
 
 
 # ---------------------------------------------------------------------------
@@ -193,21 +196,27 @@ def run_dsa(
     sweep_params: Optional[Iterable[str]] = None,
     n_sample: int = 200_000,
     seed: int = 20260625,
+    *,
+    evaluator: Optional[EvaluatorFn] = None,
+    param_specs: Optional[Mapping[str, DistSpec]] = None,
+    param_ranges: Optional[Mapping[str, Tuple[float, float]]] = None,
 ) -> DSAResult:
-    """Run a one-way DSA on the DARTH Sick-Sicker model.
+    """Run a one-way DSA on a cohort cost-effectiveness model.
+
+    Defaults to the DARTH Sick-Sicker setup; reusable on any model that
+    can produce a ``{strategy_name: {"cost": float, "qaly": float}}``
+    dictionary from a parameter mapping.
 
     Parameters
     ----------
     base_params
-        Mapping or YAML path with the deterministic base parameter set
-        (the same shape consumed by
-        :func:`opencea.builders.build_darth_sick_sicker`).
+        Mapping or YAML path with the deterministic base parameter set.
     wtp
         Willingness-to-pay threshold for the NMB outcome (default $100k).
     comparator
         Strategy whose incremental NMB vs ``baseline`` is the outcome.
         Defaults to the strategy with the highest base-case NMB at
-        ``wtp`` (excluding ``baseline``) — i.e., the expected-NMB-optimal
+        ``wtp`` (excluding ``baseline``) — the expected-NMB-optimal
         strategy at base case.
     baseline
         Comparator's reference strategy (default "Standard of care").
@@ -215,15 +224,31 @@ def run_dsa(
         ``(low, high)`` percentiles of the PSA marginal used as the
         parameter sweep bounds (default 2.5 / 97.5).
     sweep_params
-        Iterable of parameter names to sweep. Defaults to every parameter
-        in :data:`opencea.psa.PSA_PARAM_SPECS` (i.e., excludes the fixed
-        ``c_D`` / ``u_D``).
+        Iterable of parameter names to sweep. Defaults to every key in
+        ``param_specs``.
     n_sample, seed
         Sample size and seed for the empirical percentile estimate.
+    evaluator
+        Optional callable that takes a parameter mapping and returns
+        ``{name: {"cost": float, "qaly": float}}``. Defaults to building
+        the DARTH model + running the engine. Overriding it lets the
+        same DSA driver power any cohort model that exposes the same
+        outcome shape (e.g., the empagliflozin case study).
+    param_specs
+        Optional override of :data:`opencea.psa.PSA_PARAM_SPECS` —
+        used to derive percentile-based ranges for parameters not
+        explicitly given in ``param_ranges``.
+    param_ranges
+        Optional per-parameter ``(low, high)`` overrides. Takes
+        precedence over any percentile-derived range from
+        ``param_specs``. Parameters with explicit literature bounds
+        (e.g., trial 95% CIs) are typically passed here.
     """
     bp = _load_base_params(base_params)
+    evaluator = evaluator if evaluator is not None else _eval_strategies
+    param_specs = param_specs if param_specs is not None else PSA_PARAM_SPECS
 
-    base_results = _eval_strategies(bp)
+    base_results = evaluator(bp)
     if comparator is None:
         comparator = _optimal_comparator(base_results, baseline, wtp)
     if comparator not in base_results:
@@ -235,16 +260,26 @@ def run_dsa(
 
     ranges = compute_parameter_ranges(
         bp,
+        specs=param_specs,
         percentiles=percentiles,
         n_sample=n_sample,
         seed=seed,
     )
-    names = list(sweep_params) if sweep_params is not None else list(PSA_PARAM_SPECS.keys())
+    if param_ranges is not None:
+        # Per-parameter overrides; extend to include the base if needed.
+        for name, (lo, hi) in param_ranges.items():
+            if name in bp:
+                base_v = float(bp[name])
+                lo = min(float(lo), base_v)
+                hi = max(float(hi), base_v)
+            ranges[name] = (float(lo), float(hi))
+
+    names = list(sweep_params) if sweep_params is not None else list(param_specs.keys())
 
     sweeps: List[ParameterSweep] = []
     for name in names:
         if name not in ranges:
-            raise KeyError(f"no PSA distribution available for {name!r}")
+            raise KeyError(f"no range available for {name!r}")
         if name not in bp:
             raise KeyError(f"{name!r} not in base parameters")
 
@@ -253,11 +288,11 @@ def run_dsa(
 
         params_low = dict(bp)
         params_low[name] = lo_v
-        out_low = _inc_nmb(_eval_strategies(params_low), comparator, baseline, wtp)
+        out_low = _inc_nmb(evaluator(params_low), comparator, baseline, wtp)
 
         params_high = dict(bp)
         params_high[name] = hi_v
-        out_high = _inc_nmb(_eval_strategies(params_high), comparator, baseline, wtp)
+        out_high = _inc_nmb(evaluator(params_high), comparator, baseline, wtp)
 
         sweeps.append(
             ParameterSweep(
