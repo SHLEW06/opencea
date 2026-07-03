@@ -5,11 +5,37 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opencea"
 version = "0.1.0"
-description = "Open, reproducible health-economic decision modeling in Python."
+description = "Open, reproducible health-economic decision modeling in Python — validated cohort state-transition CEA with PSA, DSA, CEAC, and an applied case study."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Shunji Lewandowski" }]
+keywords = [
+    "health-economics",
+    "cost-effectiveness",
+    "markov-model",
+    "cohort-model",
+    "qaly",
+    "psa",
+    "dsa",
+    "ceac",
+    "hta",
+    "decision-modeling",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
@@ -19,7 +45,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "build>=1.0",
+    "twine>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/SHLEW06/opencea"
+Repository = "https://github.com/SHLEW06/opencea"
+Issues = "https://github.com/SHLEW06/opencea/issues"
+Changelog = "https://github.com/SHLEW06/opencea/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

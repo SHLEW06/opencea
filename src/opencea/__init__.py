@@ -45,7 +45,7 @@ from .empagliflozin import (
 )
 from .engine import evaluate_sequence, simulate_trace_sequence
 
-__version__ = "0.4.0"
+__version__ = "0.1.0"
 
 __all__ = [
     "CohortModel",
