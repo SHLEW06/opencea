@@ -1,6 +1,17 @@
 # Project history
 
-OpenCEA was built incrementally, with each stage adding a capability anchored on a validation criterion. The list below is the build sequence; see the [README](README.md) for the current capability summary.
+OpenCEA was built incrementally, with each stage anchored on a validation criterion. The list below is the build sequence; see the [README](README.md) for the current capability summary and [docs/release_notes_v0.1.0.md](docs/release_notes_v0.1.0.md) for the release notes.
+
+## 0.1.0 — first tagged release (2026-07-03)
+
+First public release. Consolidates the four internal build phases (v0.1–v0.4 below) into a single installable library.
+
+- **Packaging.** `pyproject.toml` with full metadata (Intended Audience :: Science/Research, Medical Science Apps, Python 3.10–3.12 classifiers, keywords, project URLs); dev extra now includes `pytest-cov`, `build`, and `twine`. `src/opencea/__init__.py` `__version__` synced to `0.1.0`. Fresh-venv wheel install + smoke evaluation verified locally.
+- **Coverage.** `pytest --cov=opencea` reports **95%** line coverage across 117 tests (uncovered lines are Pydantic validator error branches and a few edge cases in the engine and model).
+- **Citation.** `CITATION.cff` (CFF 1.2) with author, version, MIT, repo URL, and a `references` entry for Alarid-Escudero et al. 2023 (the DARTH tutorial).
+- **PyPI publishing.** `.github/workflows/publish.yml` uses PyPI Trusted Publishing (OIDC, no stored token); one-time setup documented in `docs/PUBLISHING.md`.
+- **Housekeeping.** Repo-root planning doc moved to `docs/planning/`; README picks up a Roadmap section (FastAPI, web UI, LLM assumption critic, microsimulation, planned `opencea-evals` companion) and normalized `SHLEW06/opencea` link casing.
+- **No behavior changes.** The DARTH golden tests (manuscript Tables 5 and 6, to the cent and to the dollar) remain the release gate and are untouched.
 
 ## v0.4 — applied case study: empagliflozin vs SoC in T2D + CVD
 
