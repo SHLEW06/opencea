@@ -1,0 +1,61 @@
+cff-version: 1.2.0
+message: "If you use OpenCEA in academic or applied work, please cite it as below."
+title: "OpenCEA: Open, reproducible health-economic decision modeling in Python"
+abstract: >-
+  OpenCEA is a Python library for cohort state-transition cost-effectiveness
+  analysis. Its deterministic engine reproduces the peer-reviewed DARTH
+  Sick-Sicker reference model to the cent and to the dollar. It provides
+  vectorized probabilistic sensitivity analysis with CEAC and frontier,
+  one-way deterministic sensitivity analysis with tornado, and an applied
+  empagliflozin case study.
+type: software
+authors:
+  - family-names: Lewandowski
+    given-names: Shunji
+version: "0.1.0"
+date-released: "2026-07-03"
+license: MIT
+repository-code: "https://github.com/SHLEW06/opencea"
+url: "https://github.com/SHLEW06/opencea"
+keywords:
+  - health-economics
+  - cost-effectiveness
+  - markov-model
+  - cohort-model
+  - QALY
+  - PSA
+  - DSA
+  - CEAC
+  - HTA
+  - decision-modeling
+  - Python
+references:
+  - type: article
+    title: >-
+      An Introductory Tutorial on Cohort State-Transition Models in R Using
+      a Cost-Effectiveness Analysis Example
+    authors:
+      - family-names: Alarid-Escudero
+        given-names: Fernando
+      - family-names: Krijkamp
+        given-names: Eline M.
+      - family-names: Enns
+        given-names: Eva A.
+      - family-names: Yang
+        given-names: Alan
+      - family-names: Hunink
+        given-names: M. G. Myriam
+      - family-names: Pechlivanoglou
+        given-names: Petros
+      - family-names: Jalal
+        given-names: Hawre
+    journal: "Medical Decision Making"
+    year: 2023
+    volume: 43
+    issue: 1
+    start: 3
+    end: 20
+    doi: "10.1177/0272989X221103163"
+    notes: >-
+      Peer-reviewed reference model against which OpenCEA's deterministic
+      engine is validated (Sick-Sicker manuscript Tables 5 and 6).
