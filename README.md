@@ -1,6 +1,6 @@
 # OpenCEA
 
-[![CI](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
+[![CI](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml)
 
 > Open, reproducible, Python-native health-economic decision modeling — validated against a peer-reviewed reference and used to answer a real decision question.
 
@@ -36,8 +36,8 @@ Breakeven empagliflozin price for ICER = $100k/QALY: **$6,355/yr** under sustain
 ## Quickstart
 
 ```bash
-pip install -e ".[dev]"
-pytest                                  # 107 tests, < 5 s on a laptop
+pip install opencea                     # once published; for development: pip install -e ".[dev]"
+pytest                                  # 117 tests, < 5 s on a laptop
 ```
 
 Validated reference model (DARTH Sick-Sicker):
@@ -84,7 +84,7 @@ print(breakeven_drug_price(YAML, target_icer=100_000))      # 6,355 / yr
 
 ## Validation & tests
 
-**107 tests** run on every push to `main` and on every pull request across Python 3.10, 3.11, and 3.12 (see the [CI badge](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml) at the top):
+**117 tests, 95% line coverage** (`pytest --cov=opencea`) run on every push to `main` and on every pull request across Python 3.10, 3.11, and 3.12 (see the [CI badge](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml) at the top):
 
 - **Deterministic golden tests** pinned to the published DARTH Sick-Sicker manuscript: Table 5 totals (SoC $151,580 / 20.711, A $284,805 / 21.499, B $259,100 / 22.184, AB $378,875 / 23.137) to the cent, Table 6 ICERs (B vs SoC $72,988/QALY, AB vs B $125,764/QALY) to the dollar.
 - **PSA structural tests** — sampler reproducibility, per-parameter Monte Carlo mean recovery, PSA-mean vs deterministic Table 5 within ~1-2%, CEAC sanity at WTP extremes.
@@ -128,7 +128,28 @@ tests/
 
 For build history (what was added when), see [CHANGELOG.md](CHANGELOG.md).
 
-Not yet implemented: FastAPI backend, Streamlit / Next.js front end, LLM "assumption critic".
+## Roadmap
+
+OpenCEA 0.1.0 covers the deterministic engine, PSA/CEAC, DSA/tornado, and one
+applied case study. The following are **not yet implemented** and are stated
+here so the scope of the current release is unambiguous:
+
+- **FastAPI backend** — a thin HTTP layer over `run_model` / `run_psa` /
+  `run_dsa` so a model spec can be posted and results streamed back as JSON.
+- **Web front end** — a Streamlit or Next.js interface for interactive
+  scenario exploration on the case study, sharing a URL to a specific
+  parameter configuration.
+- **LLM "assumption critic"** — an audit pass that reads a YAML parameter
+  file plus its citations and flags implausible / uncited / conflicting
+  assumptions before the model is run.
+- **Individual-level (microsimulation) engine** — the current engine is
+  cohort-only; a per-individual trajectory engine would let second-event
+  interactions and heterogeneous baseline risk enter the analysis.
+- **[opencea-evals](https://github.com/SHLEW06/opencea-evals)** — a
+  companion repository (planned) of published cost-effectiveness models
+  reproduced end-to-end in OpenCEA, each pinned to its manuscript totals
+  and ICERs, as a growing external validation suite beyond DARTH
+  Sick-Sicker.
 
 ## Reference
 
