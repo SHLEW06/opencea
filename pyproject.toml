@@ -50,6 +50,8 @@ dev = [
     "pytest-cov>=4.0",
     "build>=1.0",
     "twine>=4.0",
+    "ruff>=0.15",
+    "pre-commit>=3.5",
 ]
 
 [project.urls]
@@ -64,3 +66,21 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
+
+[tool.ruff]
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Defaults (pycodestyle errors + pyflakes) plus import sorting and warnings.
+# Deliberately excludes UP/annotation rewrites until the typed-API pass.
+extend-select = ["I", "W"]
+
+[tool.coverage.run]
+source_pkgs = ["opencea"]
+
+[tool.coverage.report]
+# Measured baseline at adoption (2026-07-13): 95%. Threshold set with
+# headroom so honest refactors don't fail CI on a fraction of a percent.
+fail_under = 90
+show_missing = true
