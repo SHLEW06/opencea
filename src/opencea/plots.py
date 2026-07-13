@@ -10,6 +10,7 @@ analytic helpers in :mod:`opencea.psa` so plots and tests share one
 source of truth for NMB / CEAC values. The tornado takes a
 :class:`opencea.sensitivity.DSAResult` directly.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,12 +32,11 @@ from .psa import (
 )
 from .sensitivity import DSAResult
 
-
 PathLike = Union[str, Path]
 
 
 def _format_money(x: float, _pos: int = 0) -> str:
-    return f"${x/1000:,.0f}k" if abs(x) >= 1000 else f"${x:,.0f}"
+    return f"${x / 1000:,.0f}k" if abs(x) >= 1000 else f"${x:,.0f}"
 
 
 def plot_ce_plane(
@@ -216,7 +216,7 @@ def plot_tornado(
 
     fig, ax = plt.subplots(figsize=(11, max(3.5, 0.45 * n + 2.5)))
 
-    color_low = "#4C78A8"   # outcome at the parameter's LOW value
+    color_low = "#4C78A8"  # outcome at the parameter's LOW value
     color_high = "#E15759"  # outcome at the parameter's HIGH value
     bar_h = 0.7
 
@@ -261,14 +261,22 @@ def plot_tornado(
         left_val = sw.low_value if sw.low_outcome <= sw.high_outcome else sw.high_value
         right_val = sw.high_value if sw.high_outcome >= sw.low_outcome else sw.low_value
         ax.text(
-            left_end - pad * 0.3, i,
+            left_end - pad * 0.3,
+            i,
             _fmt_param_value(left_val),
-            ha="right", va="center", fontsize=8, color="#333",
+            ha="right",
+            va="center",
+            fontsize=8,
+            color="#333",
         )
         ax.text(
-            right_end + pad * 0.3, i,
+            right_end + pad * 0.3,
+            i,
             _fmt_param_value(right_val),
-            ha="left", va="center", fontsize=8, color="#333",
+            ha="left",
+            va="center",
+            fontsize=8,
+            color="#333",
         )
 
     ax.axvline(base, color="black", lw=1.2)

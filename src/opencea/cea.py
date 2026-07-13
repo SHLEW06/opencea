@@ -19,6 +19,7 @@ rows show NaN for ``inc_cost`` / ``inc_qaly`` / ``icer``.
 
 CEAC and PSA-derived outputs live in :mod:`opencea.psa`.
 """
+
 from __future__ import annotations
 
 import math
@@ -26,7 +27,6 @@ from typing import Dict, Iterable, List, Optional
 
 import numpy as np
 import pandas as pd
-
 
 # Status labels used by the cea_table ``status`` column.
 STATUS_FRONTIER = "frontier"

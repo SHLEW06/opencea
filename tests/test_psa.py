@@ -17,6 +17,7 @@ across RNGs (numpy and R use different streams), so these tests validate
   - Strategy A is dominated *in expectation* (matches the deterministic
     Table 6 result).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,16 +37,15 @@ from opencea.psa import (
     sample_psa_params,
 )
 
-
 EXAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sick_sicker.yaml"
 
 # Used by the "PSA mean vs deterministic" tests. Numbers from
 # tests/test_darth_reference.py — the manuscript's Table 5.
 DETERMINISTIC = {
     "Standard of care": {"cost": 151_580.0, "qaly": 20.711},
-    "Strategy A":       {"cost": 284_805.0, "qaly": 21.499},
-    "Strategy B":       {"cost": 259_100.0, "qaly": 22.184},
-    "Strategy AB":      {"cost": 378_875.0, "qaly": 23.137},
+    "Strategy A": {"cost": 284_805.0, "qaly": 21.499},
+    "Strategy B": {"cost": 259_100.0, "qaly": 22.184},
+    "Strategy AB": {"cost": 378_875.0, "qaly": 23.137},
 }
 
 
@@ -116,14 +116,14 @@ def _analytic_variance(name: str) -> float:
     spec = PSA_PARAM_SPECS[name]
     if spec.family == "gamma":
         shape, scale = spec.params["shape"], spec.params["scale"]
-        return shape * scale ** 2
+        return shape * scale**2
     if spec.family == "beta":
         a, b = spec.params["a"], spec.params["b"]
         return (a * b) / ((a + b) ** 2 * (a + b + 1.0))
     if spec.family == "lognormal":
         # Var of lognormal(mu, sigma) = (exp(sigma^2) - 1) * exp(2 mu + sigma^2)
         mu, sigma = spec.params["mean"], spec.params["sigma"]
-        return (np.exp(sigma ** 2) - 1.0) * np.exp(2.0 * mu + sigma ** 2)
+        return (np.exp(sigma**2) - 1.0) * np.exp(2.0 * mu + sigma**2)
     raise ValueError(spec.family)
 
 
@@ -153,7 +153,7 @@ def test_sampled_mean_recovers_target(name, big_draws):
     # (those typically shift the mean by orders of magnitude).
     assert abs(sample_mean - analytic_mean) < 4.0 * se, (
         f"{name}: sample mean {sample_mean:.6g} vs analytic {analytic_mean:.6g} "
-        f"(4 SE band = {4*se:.6g})"
+        f"(4 SE band = {4 * se:.6g})"
     )
 
 
@@ -189,8 +189,8 @@ def test_lognormal_medians_match_specification():
 #   - Other parameters are symmetric / centred on the deterministic values,
 #     so costs sit within ~0.5%.
 # Tolerances cover MC error + the structural u_H gap.
-COST_REL_TOL = 0.02      # 2% relative for costs
-QALY_REL_TOL = 0.025     # 2.5% relative for QALYs (u_H drift = ~1.5% on its own)
+COST_REL_TOL = 0.02  # 2% relative for costs
+QALY_REL_TOL = 0.025  # 2.5% relative for QALYs (u_H drift = ~1.5% on its own)
 
 
 @pytest.mark.parametrize("name", list(DETERMINISTIC.keys()))
@@ -301,7 +301,7 @@ def test_plots_render_to_disk(psa_result, wtp_grid, tmp_path):
     """The plotting module produces non-empty PNG files for all three
     figures. Content correctness is exercised by the CEAC / frontier
     statistical tests above; this test just guards the matplotlib path."""
-    from opencea.plots import plot_ce_plane, plot_ceac, plot_ce_frontier
+    from opencea.plots import plot_ce_frontier, plot_ce_plane, plot_ceac
 
     p1 = plot_ce_plane(psa_result, tmp_path / "ce_plane.png")
     p2 = plot_ceac(psa_result, tmp_path / "ceac.png", wtp_grid=wtp_grid)

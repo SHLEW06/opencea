@@ -7,6 +7,29 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    name: ruff (lint + format)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Ruff lint
+        run: ruff check src tests
+
+      - name: Ruff format check
+        run: ruff format --check src tests
+
   test:
     name: pytest (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -31,9 +54,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run pytest
+      - name: Run pytest with coverage
         # matplotlib uses the headless Agg backend (set in opencea.plots), so
-        # no display server is required in the runner.
+        # no display server is required in the runner. The coverage threshold
+        # (fail_under) comes from [tool.coverage.report] in pyproject.toml.
         env:
           MPLBACKEND: Agg
-        run: pytest
+        run: pytest --cov=opencea

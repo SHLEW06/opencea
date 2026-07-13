@@ -8,11 +8,11 @@ tornado (bracketing, non-negative swings, descending sort) and a sanity
 ordering — a parameter with real uncertainty must outrank a tightly
 specified one (hr_S1 has sdlog = 0.01 by construction).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from opencea.builders import build_darth_sick_sicker
@@ -20,7 +20,6 @@ from opencea.cea import nmb
 from opencea.engine import run_model
 from opencea.psa import PSA_PARAM_SPECS
 from opencea.sensitivity import compute_parameter_ranges, run_dsa
-
 
 EXAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sick_sicker.yaml"
 
@@ -82,8 +81,12 @@ def test_dsa_endpoint_eval_uses_same_builder_engine_path(dsa, deterministic_resu
     bp_low = dict(bp)
     bp_low[target_param] = sw.low_value
     res = {r["name"]: r for r in run_model(build_darth_sick_sicker(bp_low))}
-    expected_low = nmb(res["Strategy B"]["total_cost"], res["Strategy B"]["total_qaly"], WTP) - nmb(
-        res["Standard of care"]["total_cost"], res["Standard of care"]["total_qaly"], WTP
+    expected_low = nmb(
+        res["Strategy B"]["total_cost"], res["Strategy B"]["total_qaly"], WTP
+    ) - nmb(
+        res["Standard of care"]["total_cost"],
+        res["Standard of care"]["total_qaly"],
+        WTP,
     )
     assert sw.low_outcome == pytest.approx(expected_low, abs=1e-9)
 
@@ -186,6 +189,7 @@ def test_compute_parameter_ranges_extends_for_u_H():
     """u_H has deterministic base 1.0 > 97.5%ile of Beta(200, 3) ~ 0.998.
     With extension enabled the range high must equal the base (1.0)."""
     import yaml
+
     bp = yaml.safe_load(EXAMPLE_PATH.read_text())
     ranges = compute_parameter_ranges(bp, extend_to_include_base=True)
     lo, hi = ranges["u_H"]
@@ -196,8 +200,14 @@ def test_compute_parameter_ranges_extends_for_u_H():
 def test_dsa_to_dataframe_columns(dsa):
     df = dsa.to_dataframe()
     required = {
-        "parameter", "base_value", "low_value", "high_value",
-        "low_outcome", "high_outcome", "base_outcome", "swing",
+        "parameter",
+        "base_value",
+        "low_value",
+        "high_value",
+        "low_outcome",
+        "high_outcome",
+        "base_outcome",
+        "swing",
     }
     assert required.issubset(df.columns)
     # Sorted by swing descending in the row order

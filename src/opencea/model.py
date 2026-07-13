@@ -22,6 +22,7 @@ ICERs:
   - costs are non-negative,
   - vector lengths agree with the declared number of states.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -29,7 +30,6 @@ from typing import List, Literal, Union
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 
 # Tolerance for floating-point validation of probability sums / bounds.
 # Loose enough to accept hand-written YAML where rows are written to a few
@@ -48,7 +48,9 @@ class Strategy(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str = Field(..., description="Human-readable strategy label, e.g. 'SoC' or 'A'.")
+    name: str = Field(
+        ..., description="Human-readable strategy label, e.g. 'SoC' or 'A'."
+    )
     transition_matrix: List[List[float]] = Field(
         ..., description="Square (n_states x n_states) row-stochastic matrix."
     )
@@ -64,15 +66,19 @@ class Strategy(BaseModel):
     def _validate_transition_matrix(cls, v: List[List[float]]) -> List[List[float]]:
         arr = np.asarray(v, dtype=float)
         if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
-            raise ValueError(
-                f"transition_matrix must be square; got shape {arr.shape}"
-            )
+            raise ValueError(f"transition_matrix must be square; got shape {arr.shape}")
         if (arr < -_PROB_TOL).any() or (arr > 1 + _PROB_TOL).any():
             raise ValueError("transition probabilities must lie in [0, 1]")
         row_sums = arr.sum(axis=1)
         if not np.allclose(row_sums, 1.0, atol=_PROB_TOL):
-            bad = [(i, float(s)) for i, s in enumerate(row_sums) if not np.isclose(s, 1.0, atol=_PROB_TOL)]
-            raise ValueError(f"transition matrix rows must sum to 1; offending rows: {bad}")
+            bad = [
+                (i, float(s))
+                for i, s in enumerate(row_sums)
+                if not np.isclose(s, 1.0, atol=_PROB_TOL)
+            ]
+            raise ValueError(
+                f"transition matrix rows must sum to 1; offending rows: {bad}"
+            )
         return v
 
     @field_validator("state_costs")
@@ -119,9 +125,12 @@ class CohortModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     states: List[str] = Field(..., description="Ordered names of the health states.")
-    strategies: List[Strategy] = Field(..., min_length=1, description="One or more comparator strategies.")
+    strategies: List[Strategy] = Field(
+        ..., min_length=1, description="One or more comparator strategies."
+    )
     initial_distribution: List[float] = Field(
-        ..., description="Starting proportion of the cohort in each state; must sum to 1."
+        ...,
+        description="Starting proportion of the cohort in each state; must sum to 1.",
     )
     cycle_length: float = Field(1.0, gt=0, description="Cycle length in years.")
     time_horizon: int = Field(..., gt=0, description="Number of cycles to simulate.")
@@ -134,7 +143,7 @@ class CohortModel(BaseModel):
     wcc_method: Literal["simpson_1_3", "half_cycle", "none"] = Field(
         "simpson_1_3",
         description="Within-cycle-correction method. 'simpson_1_3' (DARTH default), "
-                    "'half_cycle' (trapezoidal), or 'none'.",
+        "'half_cycle' (trapezoidal), or 'none'.",
     )
 
     @field_validator("initial_distribution")
@@ -144,7 +153,9 @@ class CohortModel(BaseModel):
         if (arr < -_PROB_TOL).any() or (arr > 1 + _PROB_TOL).any():
             raise ValueError("initial_distribution entries must lie in [0, 1]")
         if not np.isclose(arr.sum(), 1.0, atol=_PROB_TOL):
-            raise ValueError(f"initial_distribution must sum to 1; got {float(arr.sum())}")
+            raise ValueError(
+                f"initial_distribution must sum to 1; got {float(arr.sum())}"
+            )
         return v
 
     @model_validator(mode="after")

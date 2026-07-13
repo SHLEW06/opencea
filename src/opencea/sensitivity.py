@@ -19,9 +19,10 @@ range is extended to include the deterministic base case when the base
 lies outside the percentile interval (relevant for ``u_H``, whose
 deterministic value of 1.0 sits above the Beta(200, 3) 97.5th percentile).
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
@@ -32,7 +33,6 @@ from .builders import build_darth_sick_sicker
 from .cea import nmb as _nmb
 from .engine import run_model
 from .psa import PSA_PARAM_SPECS, DistSpec, sample_psa_params
-
 
 EvaluatorFn = Callable[[Mapping[str, Any]], Dict[str, Dict[str, float]]]
 
@@ -168,7 +168,9 @@ def _optimal_comparator(
 ) -> str:
     """Strategy with highest NMB at ``wtp``, excluding ``baseline``."""
     candidates = [n for n in results if n != baseline]
-    return max(candidates, key=lambda n: _nmb(results[n]["cost"], results[n]["qaly"], wtp))
+    return max(
+        candidates, key=lambda n: _nmb(results[n]["cost"], results[n]["qaly"], wtp)
+    )
 
 
 # ---------------------------------------------------------------------------
