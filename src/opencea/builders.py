@@ -20,10 +20,11 @@ Source of truth for every step below:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Mapping, Union
+from typing import Any, Mapping
 
 import numpy as np
 
+from ._types import ParameterInput
 from .model import CohortModel, Strategy
 
 
@@ -127,9 +128,7 @@ def _build_transition_matrix(
     return P
 
 
-def build_darth_sick_sicker(
-    params: Union[Mapping[str, Any], str, Path],
-) -> CohortModel:
+def build_darth_sick_sicker(params: ParameterInput) -> CohortModel:
     """Construct a ``CohortModel`` for the DARTH Sick-Sicker tutorial.
 
     Parameters

@@ -23,10 +23,12 @@ CEAC and PSA-derived outputs live in :mod:`opencea.psa`.
 from __future__ import annotations
 
 import math
-from typing import Dict, Iterable, List, Optional
+from typing import Iterable, Optional
 
 import numpy as np
 import pandas as pd
+
+from ._types import CEAStrategyResult
 
 # Status labels used by the cea_table ``status`` column.
 STATUS_FRONTIER = "frontier"
@@ -75,8 +77,8 @@ def _flag_strictly_dominated(costs: np.ndarray, qalys: np.ndarray) -> np.ndarray
 
 
 def _prune_extended_dominated(
-    candidate_idx: List[int], costs: np.ndarray, qalys: np.ndarray
-) -> tuple[List[int], List[int]]:
+    candidate_idx: list[int], costs: np.ndarray, qalys: np.ndarray
+) -> tuple[list[int], list[int]]:
     """Iteratively prune extended-dominated strategies from a cost-sorted list.
 
     Given ``candidate_idx`` (already sorted by cost and free of strictly
@@ -87,7 +89,7 @@ def _prune_extended_dominated(
 
     Returns ``(frontier_idx, extended_dominated_idx)``.
     """
-    extended: List[int] = []
+    extended: list[int] = []
     work = list(candidate_idx)
     while True:
         # Build sequential ICERs along the current candidate frontier.
@@ -146,7 +148,7 @@ def _classify_dominance(costs: np.ndarray, qalys: np.ndarray) -> np.ndarray:
 
 
 def cea_table(
-    results: Iterable[Dict[str, object]],
+    results: Iterable[CEAStrategyResult],
     wtp: Optional[float] = None,
 ) -> pd.DataFrame:
     """Build a cost-effectiveness table from a list of strategy results.
@@ -167,7 +169,7 @@ def cea_table(
     If ``wtp`` is provided, a ``nmb`` column is added (computed for all
     strategies, dominated or not).
     """
-    rows: List[Dict[str, object]] = []
+    rows: list[dict[str, str | float]] = []
     for r in results:
         rows.append(
             {
@@ -179,8 +181,8 @@ def cea_table(
 
     df = pd.DataFrame(rows).sort_values("total_cost").reset_index(drop=True)
 
-    costs = df["total_cost"].to_numpy()
-    qalys = df["total_qaly"].to_numpy()
+    costs = np.asarray(df["total_cost"], dtype=float)
+    qalys = np.asarray(df["total_qaly"], dtype=float)
 
     status = _classify_dominance(costs, qalys)
     df["status"] = status
@@ -196,8 +198,8 @@ def cea_table(
         if k == 0:
             continue
         prev = frontier_idx[k - 1]
-        dc = float(df.at[i, "total_cost"] - df.at[prev, "total_cost"])
-        dq = float(df.at[i, "total_qaly"] - df.at[prev, "total_qaly"])
+        dc = float(costs[i] - costs[prev])
+        dq = float(qalys[i] - qalys[prev])
         inc_cost[i] = dc
         inc_qaly[i] = dq
         icer_col[i] = dc / dq if dq != 0 else np.nan

@@ -20,6 +20,7 @@ pytest --cov=opencea        # with coverage; CI enforces the fail_under
                             # threshold in pyproject.toml
 ruff check src tests        # lint
 ruff format src tests       # format (CI runs `ruff format --check`)
+python -m mypy src/opencea  # public API and package implementation
 ```
 
 All of these run in CI (`.github/workflows/ci.yml`) on Python 3.10–3.12; a PR must pass lint, format check, and the full test suite with coverage.

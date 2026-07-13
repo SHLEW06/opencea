@@ -25,12 +25,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
-from .engine import gen_wcc
+from ._types import ParameterInput
+from .engine import WCCMethod, gen_wcc
 
 # ---------------------------------------------------------------------------
 # Distribution specification
@@ -48,7 +49,7 @@ class DistSpec:
     self-check test that the sampler is wired up correctly.
     """
 
-    family: str
+    family: Literal["gamma", "lognormal", "beta"]
     params: Dict[str, float]
     target_mean: float
     is_median: bool = False  # lognormal target is the median, not the mean
@@ -282,7 +283,7 @@ def _simulate_strategy_batched(
     cycle_length: float,
     d_c: float,
     d_e: float,
-    wcc_method: str,
+    wcc_method: WCCMethod,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Run one strategy across all draws; return ``(total_cost, total_qaly)``.
 
@@ -338,7 +339,7 @@ class PSAResult:
 
 
 def _load_base_params(
-    base_params: Union[Mapping[str, Any], str, Path],
+    base_params: ParameterInput,
 ) -> Mapping[str, Any]:
     if isinstance(base_params, (str, Path)):
         import yaml
@@ -349,10 +350,10 @@ def _load_base_params(
 
 
 def run_psa(
-    base_params: Union[Mapping[str, Any], str, Path],
+    base_params: ParameterInput,
     n_sim: int = 10_000,
     seed: int = 20260625,
-    wcc_method: str = "simpson_1_3",
+    wcc_method: WCCMethod = "simpson_1_3",
 ) -> PSAResult:
     """Run the full DARTH Sick-Sicker PSA in vectorized form.
 
