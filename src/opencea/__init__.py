@@ -5,28 +5,9 @@ probabilistic sensitivity analysis (PSA) with CEAC + frontier, one-way
 deterministic sensitivity analysis (DSA) with tornado, and a matplotlib
 plotting layer for all figures.
 """
-from .model import CohortModel, Strategy
-from .engine import simulate_trace, evaluate_strategy, run_model, gen_wcc
-from .cea import cea_table, icer, nmb
+
 from .builders import build_darth_sick_sicker, rate_to_prob
-from .psa import (
-    DistSpec,
-    PSAResult,
-    PSA_PARAM_SPECS,
-    compute_ceac,
-    compute_nmb,
-    default_wtp_grid,
-    expected_nmb_frontier,
-    incremental_vs_baseline,
-    run_psa,
-    sample_psa_params,
-)
-from .sensitivity import (
-    DSAResult,
-    ParameterSweep,
-    compute_parameter_ranges,
-    run_dsa,
-)
+from .cea import cea_table, icer, nmb
 from .empagliflozin import (
     EMPA,
     EMPA_DSA_RANGE_OVERRIDES,
@@ -43,7 +24,33 @@ from .empagliflozin import (
     run_empa_psa_scenario,
     scenario_icer,
 )
-from .engine import evaluate_sequence, simulate_trace_sequence
+from .engine import (
+    evaluate_sequence,
+    evaluate_strategy,
+    gen_wcc,
+    run_model,
+    simulate_trace,
+    simulate_trace_sequence,
+)
+from .model import CohortModel, Strategy
+from .psa import (
+    PSA_PARAM_SPECS,
+    DistSpec,
+    PSAResult,
+    compute_ceac,
+    compute_nmb,
+    default_wtp_grid,
+    expected_nmb_frontier,
+    incremental_vs_baseline,
+    run_psa,
+    sample_psa_params,
+)
+from .sensitivity import (
+    DSAResult,
+    ParameterSweep,
+    compute_parameter_ranges,
+    run_dsa,
+)
 
 __version__ = "0.1.0"
 

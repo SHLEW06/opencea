@@ -20,9 +20,10 @@ The result object exposes the sampled parameter draws plus per-strategy
 ``(n_sim,)`` cost / QALY arrays — the raw material for the CEAC, the
 CE plane, and any downstream expected-NMB analysis.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
@@ -30,7 +31,6 @@ import numpy as np
 import pandas as pd
 
 from .engine import gen_wcc
-
 
 # ---------------------------------------------------------------------------
 # Distribution specification
@@ -62,24 +62,30 @@ class DistSpec:
 # Fixed (not sampled) per the DARTH function: c_D = 0, u_D = 0.
 PSA_PARAM_SPECS: Dict[str, DistSpec] = {
     # transition rates and hazard ratios
-    "r_HD":          DistSpec("gamma",     {"shape": 20.0,  "scale": 1.0 / 10000.0}, 20.0 / 10000.0),
-    "r_HS1":         DistSpec("gamma",     {"shape": 30.0,  "scale": 1.0 / 200.0},   30.0 / 200.0),
-    "r_S1H":         DistSpec("gamma",     {"shape": 60.0,  "scale": 1.0 / 120.0},   60.0 / 120.0),
-    "r_S1S2":        DistSpec("gamma",     {"shape": 84.0,  "scale": 1.0 / 800.0},   84.0 / 800.0),
-    "hr_S1":         DistSpec("lognormal", {"mean": np.log(3.0),   "sigma": 0.01},   3.0,  is_median=True),
-    "hr_S2":         DistSpec("lognormal", {"mean": np.log(10.0),  "sigma": 0.02},   10.0, is_median=True),
-    "hr_S1S2_trtB":  DistSpec("lognormal", {"mean": np.log(0.6),   "sigma": 0.02},   0.6,  is_median=True),
+    "r_HD": DistSpec("gamma", {"shape": 20.0, "scale": 1.0 / 10000.0}, 20.0 / 10000.0),
+    "r_HS1": DistSpec("gamma", {"shape": 30.0, "scale": 1.0 / 200.0}, 30.0 / 200.0),
+    "r_S1H": DistSpec("gamma", {"shape": 60.0, "scale": 1.0 / 120.0}, 60.0 / 120.0),
+    "r_S1S2": DistSpec("gamma", {"shape": 84.0, "scale": 1.0 / 800.0}, 84.0 / 800.0),
+    "hr_S1": DistSpec(
+        "lognormal", {"mean": np.log(3.0), "sigma": 0.01}, 3.0, is_median=True
+    ),
+    "hr_S2": DistSpec(
+        "lognormal", {"mean": np.log(10.0), "sigma": 0.02}, 10.0, is_median=True
+    ),
+    "hr_S1S2_trtB": DistSpec(
+        "lognormal", {"mean": np.log(0.6), "sigma": 0.02}, 0.6, is_median=True
+    ),
     # costs
-    "c_H":     DistSpec("gamma", {"shape": 100.0,   "scale": 20.0},   100.0 * 20.0),
-    "c_S1":    DistSpec("gamma", {"shape": 177.8,   "scale": 22.5},   177.8 * 22.5),
-    "c_S2":    DistSpec("gamma", {"shape": 225.0,   "scale": 66.7},   225.0 * 66.7),
-    "c_trtA":  DistSpec("gamma", {"shape": 73.5,    "scale": 163.3},  73.5 * 163.3),
-    "c_trtB":  DistSpec("gamma", {"shape": 86.2,    "scale": 150.8},  86.2 * 150.8),
+    "c_H": DistSpec("gamma", {"shape": 100.0, "scale": 20.0}, 100.0 * 20.0),
+    "c_S1": DistSpec("gamma", {"shape": 177.8, "scale": 22.5}, 177.8 * 22.5),
+    "c_S2": DistSpec("gamma", {"shape": 225.0, "scale": 66.7}, 225.0 * 66.7),
+    "c_trtA": DistSpec("gamma", {"shape": 73.5, "scale": 163.3}, 73.5 * 163.3),
+    "c_trtB": DistSpec("gamma", {"shape": 86.2, "scale": 150.8}, 86.2 * 150.8),
     # utilities
-    "u_H":     DistSpec("beta", {"a": 200.0, "b": 3.0},   200.0 / 203.0),
-    "u_S1":    DistSpec("beta", {"a": 130.0, "b": 45.0},  130.0 / 175.0),
-    "u_S2":    DistSpec("beta", {"a": 230.0, "b": 230.0}, 0.5),
-    "u_trtA":  DistSpec("beta", {"a": 300.0, "b": 15.0},  300.0 / 315.0),
+    "u_H": DistSpec("beta", {"a": 200.0, "b": 3.0}, 200.0 / 203.0),
+    "u_S1": DistSpec("beta", {"a": 130.0, "b": 45.0}, 130.0 / 175.0),
+    "u_S2": DistSpec("beta", {"a": 230.0, "b": 230.0}, 0.5),
+    "u_trtA": DistSpec("beta", {"a": 300.0, "b": 15.0}, 300.0 / 315.0),
 }
 
 # Parameters that are fixed (not sampled), per the DARTH reference.
@@ -113,9 +119,13 @@ def sample_psa_params(
     cols: Dict[str, np.ndarray] = {}
     for name, spec in specs.items():
         if spec.family == "gamma":
-            cols[name] = rng.gamma(shape=spec.params["shape"], scale=spec.params["scale"], size=n_sim)
+            cols[name] = rng.gamma(
+                shape=spec.params["shape"], scale=spec.params["scale"], size=n_sim
+            )
         elif spec.family == "lognormal":
-            cols[name] = rng.lognormal(mean=spec.params["mean"], sigma=spec.params["sigma"], size=n_sim)
+            cols[name] = rng.lognormal(
+                mean=spec.params["mean"], sigma=spec.params["sigma"], size=n_sim
+            )
         elif spec.family == "beta":
             cols[name] = rng.beta(a=spec.params["a"], b=spec.params["b"], size=n_sim)
         else:
@@ -441,14 +451,16 @@ def compute_ceac(result: PSAResult, wtp_grid: np.ndarray) -> pd.DataFrame:
     """
     wtp = np.asarray(wtp_grid, dtype=float)
     nmb = compute_nmb(result, wtp)  # (n_sim, n_strat, n_wtp)
-    winners = nmb.argmax(axis=1)    # (n_sim, n_wtp)
+    winners = nmb.argmax(axis=1)  # (n_sim, n_wtp)
     n_strat = len(result.strategy_names)
     n_wtp = wtp.size
     counts = np.zeros((n_wtp, n_strat), dtype=float)
     for s in range(n_strat):
         counts[:, s] = (winners == s).sum(axis=0)
     probs = counts / result.n_sim
-    return pd.DataFrame(probs, index=pd.Index(wtp, name="wtp"), columns=list(result.strategy_names))
+    return pd.DataFrame(
+        probs, index=pd.Index(wtp, name="wtp"), columns=list(result.strategy_names)
+    )
 
 
 def expected_nmb_frontier(result: PSAResult, wtp_grid: np.ndarray) -> pd.DataFrame:
@@ -460,9 +472,9 @@ def expected_nmb_frontier(result: PSAResult, wtp_grid: np.ndarray) -> pd.DataFra
     expected NMB.
     """
     wtp = np.asarray(wtp_grid, dtype=float)
-    nmb = compute_nmb(result, wtp)                 # (n_sim, n_strat, n_wtp)
-    expected = nmb.mean(axis=0)                    # (n_strat, n_wtp)
-    best_idx = expected.argmax(axis=0)             # (n_wtp,)
+    nmb = compute_nmb(result, wtp)  # (n_sim, n_strat, n_wtp)
+    expected = nmb.mean(axis=0)  # (n_strat, n_wtp)
+    best_idx = expected.argmax(axis=0)  # (n_wtp,)
     names = list(result.strategy_names)
     best_name = np.array(names)[best_idx]
     out = pd.DataFrame(expected.T, index=pd.Index(wtp, name="wtp"), columns=names)
@@ -481,7 +493,9 @@ def incremental_vs_baseline(
     plane scatter.
     """
     if baseline not in result.strategy_names:
-        raise KeyError(f"baseline {baseline!r} not in strategies {result.strategy_names}")
+        raise KeyError(
+            f"baseline {baseline!r} not in strategies {result.strategy_names}"
+        )
     base_cost = result.costs[baseline].to_numpy()
     base_qaly = result.qalys[baseline].to_numpy()
     rows: List[pd.DataFrame] = []

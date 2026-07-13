@@ -26,6 +26,7 @@ Conventions
 * Total reward = sum over t of (per-cycle reward) * (discount weight) *
   (within-cycle-correction weight).
 """
+
 from __future__ import annotations
 
 from typing import Dict, List, Literal
@@ -33,7 +34,6 @@ from typing import Dict, List, Literal
 import numpy as np
 
 from .model import CohortModel, Strategy
-
 
 WCCMethod = Literal["simpson_1_3", "half_cycle", "none"]
 
@@ -128,8 +128,12 @@ def evaluate_strategy(strategy: Strategy, model: CohortModel) -> Dict[str, objec
     cycle_costs = trace @ (costs * model.cycle_length)
     cycle_qalys = trace @ (utilities * model.cycle_length)
 
-    dw_c = _discount_weights(model.discount_rate_costs, model.time_horizon, model.cycle_length)
-    dw_e = _discount_weights(model.discount_rate_qalys, model.time_horizon, model.cycle_length)
+    dw_c = _discount_weights(
+        model.discount_rate_costs, model.time_horizon, model.cycle_length
+    )
+    dw_e = _discount_weights(
+        model.discount_rate_qalys, model.time_horizon, model.cycle_length
+    )
     wcc = gen_wcc(model.time_horizon, model.wcc_method)
 
     total_cost = float(np.sum(cycle_costs * dw_c * wcc))

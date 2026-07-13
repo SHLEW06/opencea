@@ -16,10 +16,11 @@ Source of truth for every step below:
 
   Repo: https://github.com/DARTH-git/cohort-modeling-tutorial-intro
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Mapping, Union
+from typing import Any, Mapping, Union
 
 import numpy as np
 
@@ -44,19 +45,32 @@ def rate_to_prob(r: float, t: float = 1.0) -> float:
 # ``l_params_all`` list in ``analysis/cSTM_time_indep.R`` (lines 351-383).
 _DARTH_REQUIRED_KEYS = {
     # transition rates & hazard ratios
-    "r_HD", "r_HS1", "r_S1H", "r_S1S2",
-    "hr_S1", "hr_S2",
+    "r_HD",
+    "r_HS1",
+    "r_S1H",
+    "r_S1S2",
+    "hr_S1",
+    "hr_S2",
     "hr_S1S2_trtB",
     # state costs (per cycle, before treatment add-ons)
-    "c_H", "c_S1", "c_S2", "c_D",
-    "c_trtA", "c_trtB",
+    "c_H",
+    "c_S1",
+    "c_S2",
+    "c_D",
+    "c_trtA",
+    "c_trtB",
     # state utilities
-    "u_H", "u_S1", "u_S2", "u_D",
+    "u_H",
+    "u_S1",
+    "u_S2",
+    "u_D",
     "u_trtA",
     # cohort horizon and discounting
-    "n_age_init", "n_age_max",
+    "n_age_init",
+    "n_age_max",
     "cycle_length",
-    "d_c", "d_e",
+    "d_c",
+    "d_e",
 }
 
 
@@ -89,16 +103,16 @@ def _build_transition_matrix(
         # From H
         [
             (1 - p_HD) * (1 - p_HS1),  # H -> H
-            (1 - p_HD) * p_HS1,        # H -> S1
-            0.0,                       # H -> S2
-            p_HD,                      # H -> D
+            (1 - p_HD) * p_HS1,  # H -> S1
+            0.0,  # H -> S2
+            p_HD,  # H -> D
         ],
         # From S1
         [
-            (1 - p_S1D) * p_S1H,                       # S1 -> H
-            (1 - p_S1D) * (1 - (p_S1H + p_S1S2)),      # S1 -> S1
-            (1 - p_S1D) * p_S1S2,                      # S1 -> S2
-            p_S1D,                                     # S1 -> D
+            (1 - p_S1D) * p_S1H,  # S1 -> H
+            (1 - p_S1D) * (1 - (p_S1H + p_S1S2)),  # S1 -> S1
+            (1 - p_S1D) * p_S1S2,  # S1 -> S2
+            p_S1D,  # S1 -> D
         ],
         # From S2
         [
@@ -134,6 +148,7 @@ def build_darth_sick_sicker(
     """
     if isinstance(params, (str, Path)):
         import yaml
+
         with open(params, "r") as f:
             params = yaml.safe_load(f)
     assert isinstance(params, Mapping)
@@ -166,7 +181,9 @@ def build_darth_sick_sicker(
 
     # --- transition matrices (DARTH lines 178-203) ---------------------
     P_SoC = _build_transition_matrix(p_HD, p_HS1, p_S1H, p_S1S2, p_S1D, p_S2D)
-    P_A = _build_transition_matrix(p_HD, p_HS1, p_S1H, p_S1S2, p_S1D, p_S2D)  # A leaves transitions unchanged
+    P_A = _build_transition_matrix(
+        p_HD, p_HS1, p_S1H, p_S1S2, p_S1D, p_S2D
+    )  # A leaves transitions unchanged
     P_B = _build_transition_matrix(p_HD, p_HS1, p_S1H, p_S1S2_trtB, p_S1D, p_S2D)
     P_AB = _build_transition_matrix(p_HD, p_HS1, p_S1H, p_S1S2_trtB, p_S1D, p_S2D)
 
@@ -200,7 +217,9 @@ def build_darth_sick_sicker(
     util_B = [u_H, u_S1, u_S2, u_D]
     util_AB = [u_H, u_trtA, u_S2, u_D]
 
-    n_cycles = int((float(params["n_age_max"]) - float(params["n_age_init"])) / cycle_length)
+    n_cycles = int(
+        (float(params["n_age_max"]) - float(params["n_age_init"])) / cycle_length
+    )
     if n_cycles <= 0:
         raise ValueError("n_age_max must exceed n_age_init")
 
