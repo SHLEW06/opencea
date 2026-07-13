@@ -29,16 +29,17 @@ Conventions
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal
+from typing import Literal
 
 import numpy as np
 
+from ._types import FloatArray, StrategyResult
 from .model import CohortModel, Strategy
 
 WCCMethod = Literal["simpson_1_3", "half_cycle", "none"]
 
 
-def simulate_trace(strategy: Strategy, model: CohortModel) -> np.ndarray:
+def simulate_trace(strategy: Strategy, model: CohortModel) -> FloatArray:
     """Simulate the cohort trace for one strategy.
 
     Returns an array of shape ``(time_horizon + 1, n_states)`` whose
@@ -56,7 +57,7 @@ def simulate_trace(strategy: Strategy, model: CohortModel) -> np.ndarray:
     return trace
 
 
-def _discount_weights(rate: float, n_cycles: int, cycle_length: float) -> np.ndarray:
+def _discount_weights(rate: float, n_cycles: int, cycle_length: float) -> FloatArray:
     """DARTH-style discount weights: 1 / (1 + d * cycle_length) ** t.
 
     Mirrors ``cSTM_time_indep.R`` lines 123-124. Reduces to the standard
@@ -66,7 +67,7 @@ def _discount_weights(rate: float, n_cycles: int, cycle_length: float) -> np.nda
     return 1.0 / (1.0 + rate * cycle_length) ** t
 
 
-def gen_wcc(n_cycles: int, method: WCCMethod = "simpson_1_3") -> np.ndarray:
+def gen_wcc(n_cycles: int, method: WCCMethod = "simpson_1_3") -> FloatArray:
     """Within-cycle-correction weights.
 
     Implementation faithful to ``darthtools::gen_wcc`` (DARTH intro repo,
@@ -105,7 +106,7 @@ def gen_wcc(n_cycles: int, method: WCCMethod = "simpson_1_3") -> np.ndarray:
     raise ValueError(f"unknown WCC method: {method!r}")
 
 
-def evaluate_strategy(strategy: Strategy, model: CohortModel) -> Dict[str, object]:
+def evaluate_strategy(strategy: Strategy, model: CohortModel) -> StrategyResult:
     """Compute the cohort trace and total discounted costs / QALYs for one strategy.
 
     Returns a dict with keys:
@@ -149,7 +150,7 @@ def evaluate_strategy(strategy: Strategy, model: CohortModel) -> Dict[str, objec
     }
 
 
-def run_model(model: CohortModel) -> List[Dict[str, object]]:
+def run_model(model: CohortModel) -> list[StrategyResult]:
     """Evaluate every strategy in the model and return their results."""
     return [evaluate_strategy(s, model) for s in model.strategies]
 
@@ -166,9 +167,9 @@ def run_model(model: CohortModel) -> List[Dict[str, object]]:
 
 
 def simulate_trace_sequence(
-    transition_sequence: np.ndarray,
-    initial_distribution: np.ndarray,
-) -> np.ndarray:
+    transition_sequence: FloatArray,
+    initial_distribution: FloatArray,
+) -> FloatArray:
     """Cohort trace under a per-cycle sequence of transition matrices.
 
     Parameters
@@ -207,15 +208,15 @@ def simulate_trace_sequence(
 
 def evaluate_sequence(
     name: str,
-    transition_sequence: np.ndarray,
-    state_costs: np.ndarray,
-    state_utilities: np.ndarray,
-    initial_distribution: np.ndarray,
+    transition_sequence: FloatArray,
+    state_costs: FloatArray,
+    state_utilities: FloatArray,
+    initial_distribution: FloatArray,
     cycle_length: float,
     discount_rate_costs: float,
     discount_rate_qalys: float,
     wcc_method: WCCMethod = "simpson_1_3",
-) -> Dict[str, object]:
+) -> StrategyResult:
     """Time-varying analogue of :func:`evaluate_strategy`.
 
     Uses the same per-cycle reward / discount / WCC accumulation as the
