@@ -20,6 +20,7 @@ permissive ($20k - $120k / QALY) — wide enough to allow this structural
 result, narrow enough to catch order-of-magnitude mis-specifications
 (a swapped HR direction, a missing acute cost, a missing discount, etc.).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -49,13 +50,14 @@ from opencea.empagliflozin import (
 )
 from opencea.engine import (
     evaluate_sequence,
-    evaluate_strategy as engine_evaluate_strategy,
+    evaluate_strategy,
     simulate_trace_sequence,
 )
-from opencea.engine import evaluate_strategy, run_model
+from opencea.engine import (
+    evaluate_strategy as engine_evaluate_strategy,
+)
 from opencea.psa import compute_ceac, default_wtp_grid
 from opencea.sensitivity import run_dsa
-
 
 YAML_PATH = Path(__file__).resolve().parents[1] / "examples" / "empagliflozin_t2d.yaml"
 
@@ -156,12 +158,8 @@ def test_state_cost_matches_direct_engine_call(case, model_pair):
     model, _ = model_pair
     for strat in model.strategies:
         r = evaluate_strategy(strat, model)
-        assert case[r["name"]]["state_cost"] == pytest.approx(
-            r["total_cost"], abs=1e-9
-        )
-        assert case[r["name"]]["total_qaly"] == pytest.approx(
-            r["total_qaly"], abs=1e-9
-        )
+        assert case[r["name"]]["state_cost"] == pytest.approx(r["total_cost"], abs=1e-9)
+        assert case[r["name"]]["total_qaly"] == pytest.approx(r["total_qaly"], abs=1e-9)
 
 
 def test_total_cost_equals_state_plus_acute(case):
@@ -206,7 +204,9 @@ def test_deterministic_icer_in_sanity_band(case):
     structure to land slightly above the central published $26 - 88k band."""
     soc = case[SOC]
     empa = case[EMPA]
-    ic = icer(soc["total_cost"], soc["total_qaly"], empa["total_cost"], empa["total_qaly"])
+    ic = icer(
+        soc["total_cost"], soc["total_qaly"], empa["total_cost"], empa["total_qaly"]
+    )
     assert ICER_SANITY_LOW <= ic <= ICER_SANITY_HIGH, (
         f"ICER {ic:.2f} / QALY outside sanity band "
         f"[{ICER_SANITY_LOW}, {ICER_SANITY_HIGH}] — likely mis-specification"
@@ -221,8 +221,10 @@ def test_icer_table_consistent_with_evaluator(case):
     assert list(table["strategy"]) == [SOC, EMPA]
     empa_row = table[table["strategy"] == EMPA].iloc[0]
     direct = icer(
-        case[SOC]["total_cost"], case[SOC]["total_qaly"],
-        case[EMPA]["total_cost"], case[EMPA]["total_qaly"],
+        case[SOC]["total_cost"],
+        case[SOC]["total_qaly"],
+        case[EMPA]["total_cost"],
+        case[EMPA]["total_qaly"],
     )
     assert empa_row["icer"] == pytest.approx(direct, abs=1e-9)
 
@@ -332,7 +334,7 @@ def test_ceac_at_100k_is_meaningful(psa):
 
 
 def test_case_study_figures_render(psa, dsa, tmp_path):
-    from opencea.plots import plot_ce_plane, plot_ceac, plot_ce_frontier, plot_tornado
+    from opencea.plots import plot_ce_frontier, plot_ce_plane, plot_ceac, plot_tornado
 
     p1 = plot_ce_plane(psa, tmp_path / "ce_plane.png")
     p2 = plot_ceac(psa, tmp_path / "ceac.png")
@@ -354,8 +356,10 @@ WANING = WaningSpec(start_year=3.0, end_year=10.0)
 @pytest.fixture(scope="module")
 def base_icer(case):
     return icer(
-        case[SOC]["total_cost"], case[SOC]["total_qaly"],
-        case[EMPA]["total_cost"], case[EMPA]["total_qaly"],
+        case[SOC]["total_cost"],
+        case[SOC]["total_qaly"],
+        case[EMPA]["total_cost"],
+        case[EMPA]["total_qaly"],
     )
 
 
@@ -401,10 +405,10 @@ def test_waning_spec_clipped_to_unit_interval():
     w = WaningSpec(3.0, 10.0)
     t = np.array([0.0, 2.0, 3.0, 5.0, 7.0, 10.0, 15.0])
     frac = w.effect_fraction(t)
-    np.testing.assert_allclose(frac[:3], 1.0)        # t <= start_year
-    assert 0.0 < frac[3] < 1.0                        # interpolated
+    np.testing.assert_allclose(frac[:3], 1.0)  # t <= start_year
+    assert 0.0 < frac[3] < 1.0  # interpolated
     assert 0.0 < frac[4] < 1.0
-    np.testing.assert_allclose(frac[5:], 0.0)         # t >= end_year
+    np.testing.assert_allclose(frac[5:], 0.0)  # t >= end_year
 
 
 def test_waning_hr_path_endpoints():
@@ -427,8 +431,12 @@ def test_evaluate_scenario_sustained_matches_base(case):
     :func:`evaluate_empagliflozin_case` exactly."""
     out = evaluate_scenario(YAML_PATH)
     for name in STRATEGY_NAMES:
-        assert out[name]["total_cost"] == pytest.approx(case[name]["total_cost"], abs=1e-9)
-        assert out[name]["total_qaly"] == pytest.approx(case[name]["total_qaly"], abs=1e-9)
+        assert out[name]["total_cost"] == pytest.approx(
+            case[name]["total_cost"], abs=1e-9
+        )
+        assert out[name]["total_qaly"] == pytest.approx(
+            case[name]["total_qaly"], abs=1e-9
+        )
 
 
 def test_net_price_lowers_icer(base_icer):
@@ -463,8 +471,8 @@ def test_combined_scenario_between_components(base_icer):
     icer_wan = scenario_icer(YAML_PATH, waning=WANING)
     icer_both = scenario_icer(YAML_PATH, drug_price=NET_PRICE, waning=WANING)
     assert icer_net < base_icer
-    assert icer_both > base_icer       # waning dominates the net-price benefit
-    assert icer_both < icer_wan        # but the net price still helps
+    assert icer_both > base_icer  # waning dominates the net-price benefit
+    assert icer_both < icer_wan  # but the net price still helps
 
 
 # --- Breakeven --------------------------------------------------------------
@@ -493,16 +501,12 @@ def test_breakeven_under_waning_is_lower_than_sustained():
 
 @pytest.fixture(scope="module")
 def psa_net_price():
-    return run_empa_psa_scenario(
-        YAML_PATH, n_sim=3_000, seed=42, drug_price=NET_PRICE
-    )
+    return run_empa_psa_scenario(YAML_PATH, n_sim=3_000, seed=42, drug_price=NET_PRICE)
 
 
 @pytest.fixture(scope="module")
 def psa_waning():
-    return run_empa_psa_scenario(
-        YAML_PATH, n_sim=3_000, seed=42, waning=WANING
-    )
+    return run_empa_psa_scenario(YAML_PATH, n_sim=3_000, seed=42, waning=WANING)
 
 
 @pytest.fixture(scope="module")

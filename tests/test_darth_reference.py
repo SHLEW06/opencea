@@ -27,6 +27,7 @@ implementation under test reproduces them to the cent when fed the
 DARTH base-case parameters in ``examples/sick_sicker.yaml`` through
 ``opencea.builders.build_darth_sick_sicker``.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -36,9 +37,8 @@ import pytest
 
 from opencea.builders import build_darth_sick_sicker
 from opencea.cea import cea_table, icer
-from opencea.engine import evaluate_strategy, gen_wcc, run_model, simulate_trace
+from opencea.engine import gen_wcc, run_model, simulate_trace
 from opencea.model import CohortModel
-
 
 EXAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sick_sicker.yaml"
 
@@ -47,9 +47,9 @@ EXAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sick_sicker.y
 # Costs are integer dollars; QALYs are reported to three decimals.
 EXPECTED = {
     "Standard of care": {"cost": 151_580.0, "qaly": 20.711},
-    "Strategy A":       {"cost": 284_805.0, "qaly": 21.499},
-    "Strategy B":       {"cost": 259_100.0, "qaly": 22.184},
-    "Strategy AB":      {"cost": 378_875.0, "qaly": 23.137},
+    "Strategy A": {"cost": 284_805.0, "qaly": 21.499},
+    "Strategy B": {"cost": 259_100.0, "qaly": 22.184},
+    "Strategy AB": {"cost": 378_875.0, "qaly": 23.137},
 }
 
 # Manuscript rounds costs to the nearest dollar and QALYs to 3 decimals.
@@ -88,9 +88,14 @@ def test_transition_matrices_square_and_row_stochastic(model: CohortModel):
     for strat in model.strategies:
         P = np.asarray(strat.transition_matrix, dtype=float)
         assert P.shape == (n, n), f"{strat.name}: shape {P.shape} != ({n}, {n})"
-        assert (P >= 0).all() and (P <= 1).all(), f"{strat.name}: probabilities out of [0, 1]"
+        assert (P >= 0).all() and (P <= 1).all(), (
+            f"{strat.name}: probabilities out of [0, 1]"
+        )
         np.testing.assert_allclose(
-            P.sum(axis=1), 1.0, atol=1e-12, err_msg=f"{strat.name}: rows do not sum to 1"
+            P.sum(axis=1),
+            1.0,
+            atol=1e-12,
+            err_msg=f"{strat.name}: rows do not sum to 1",
         )
 
 
@@ -105,8 +110,8 @@ def test_simpson_1_3_wcc_matches_darth(model: CohortModel):
     assert w.shape == (model.time_horizon + 1,)
     assert w[0] == pytest.approx(1 / 3)
     assert w[-1] == pytest.approx(1 / 3)
-    assert w[1] == pytest.approx(2 / 3)   # R index 2, even -> 2/3
-    assert w[2] == pytest.approx(4 / 3)   # R index 3, odd  -> 4/3
+    assert w[1] == pytest.approx(2 / 3)  # R index 2, even -> 2/3
+    assert w[2] == pytest.approx(4 / 3)  # R index 3, odd  -> 4/3
     # Interior alternation
     interior = w[1:-1]
     np.testing.assert_allclose(interior[::2], 2 / 3, atol=1e-15)
@@ -155,7 +160,9 @@ def test_total_discounted_qaly_matches_manuscript(results, name):
 def test_icer_b_vs_soc_matches_manuscript(results):
     soc = _by_name(results, "Standard of care")
     b = _by_name(results, "Strategy B")
-    icer_val = icer(soc["total_cost"], soc["total_qaly"], b["total_cost"], b["total_qaly"])
+    icer_val = icer(
+        soc["total_cost"], soc["total_qaly"], b["total_cost"], b["total_qaly"]
+    )
     # Manuscript prints $72,988 rounded to the dollar.
     assert icer_val == pytest.approx(72988.0, abs=1.0)
 
@@ -163,7 +170,9 @@ def test_icer_b_vs_soc_matches_manuscript(results):
 def test_icer_ab_vs_b_matches_manuscript(results):
     b = _by_name(results, "Strategy B")
     ab = _by_name(results, "Strategy AB")
-    icer_val = icer(b["total_cost"], b["total_qaly"], ab["total_cost"], ab["total_qaly"])
+    icer_val = icer(
+        b["total_cost"], b["total_qaly"], ab["total_cost"], ab["total_qaly"]
+    )
     assert icer_val == pytest.approx(125764.0, abs=1.0)
 
 
@@ -178,7 +187,15 @@ def test_strategy_a_is_strictly_dominated(results):
 
 def test_cea_table_orders_by_cost_and_exposes_required_columns(results):
     table = cea_table(results, wtp=100_000.0)
-    required = {"strategy", "total_cost", "total_qaly", "dominated",
-                "inc_cost", "inc_qaly", "icer", "nmb"}
+    required = {
+        "strategy",
+        "total_cost",
+        "total_qaly",
+        "dominated",
+        "inc_cost",
+        "inc_qaly",
+        "icer",
+        "nmb",
+    }
     assert required.issubset(table.columns)
     assert list(table["total_cost"]) == sorted(table["total_cost"])
