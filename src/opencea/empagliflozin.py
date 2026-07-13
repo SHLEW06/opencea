@@ -20,13 +20,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
+from ._types import CaseStrategyResult, CEAStrategyResult, DSAOutcome, ParameterInput
 from .builders import rate_to_prob
 from .engine import (
+    WCCMethod,
     evaluate_sequence,
     evaluate_strategy,
     gen_wcc,
@@ -101,7 +103,7 @@ def _build_transition_matrix(
     ]
 
 
-def _load_params(p: Union[Mapping[str, Any], str, Path]) -> Dict[str, Any]:
+def _load_params(p: ParameterInput) -> Dict[str, Any]:
     if isinstance(p, (str, Path)):
         import yaml
 
@@ -110,9 +112,7 @@ def _load_params(p: Union[Mapping[str, Any], str, Path]) -> Dict[str, Any]:
     return dict(p)
 
 
-def build_empagliflozin_t2d(
-    params: Union[Mapping[str, Any], str, Path],
-) -> Tuple[CohortModel, float]:
+def build_empagliflozin_t2d(params: ParameterInput) -> Tuple[CohortModel, float]:
     """Construct the empagliflozin case-study ``CohortModel``.
 
     Returns a tuple ``(model, c_acute_PE)``. The acute-event cost is
@@ -219,8 +219,8 @@ def _acute_cost_contribution(
 
 
 def evaluate_empagliflozin_case(
-    params: Union[Mapping[str, Any], str, Path],
-) -> Dict[str, Dict[str, float]]:
+    params: ParameterInput,
+) -> dict[str, CaseStrategyResult]:
     """Run the case study deterministically; return per-strategy totals.
 
     For each strategy the returned dict carries:
@@ -241,7 +241,7 @@ def evaluate_empagliflozin_case(
     )
     wcc = gen_wcc(model.time_horizon, method=model.wcc_method)
 
-    out: Dict[str, Dict[str, float]] = {}
+    out: dict[str, CaseStrategyResult] = {}
     for strat in model.strategies:
         r = evaluate_strategy(strat, model)
         P = np.asarray(strat.transition_matrix, dtype=float)
@@ -256,9 +256,7 @@ def evaluate_empagliflozin_case(
     return out
 
 
-def case_results_for_cea(
-    params: Union[Mapping[str, Any], str, Path],
-) -> list[Dict[str, object]]:
+def case_results_for_cea(params: ParameterInput) -> list[CEAStrategyResult]:
     """Adapter from :func:`evaluate_empagliflozin_case` to the shape
     consumed by :func:`opencea.cea.cea_table`.
     """
@@ -274,7 +272,7 @@ def case_results_for_cea(
 # ---------------------------------------------------------------------------
 
 
-def dsa_evaluator(params: Mapping[str, Any]) -> Dict[str, Dict[str, float]]:
+def dsa_evaluator(params: Mapping[str, Any]) -> dict[str, DSAOutcome]:
     """Evaluator compatible with :func:`opencea.sensitivity.run_dsa`."""
     out = evaluate_empagliflozin_case(params)
     return {
@@ -374,7 +372,7 @@ def _batched_acute_cost(
     n_cycles: int,
     cycle_length: float,
     d_c: float,
-    wcc_method: str,
+    wcc_method: WCCMethod,
 ) -> np.ndarray:
     """Discounted acute-event cost per draw — vectorized over ``n_sim``.
 
@@ -396,10 +394,10 @@ def _batched_acute_cost(
 
 
 def run_empa_psa(
-    base_params: Union[Mapping[str, Any], str, Path],
+    base_params: ParameterInput,
     n_sim: int = 10_000,
     seed: int = 20260626,
-    wcc_method: str = "simpson_1_3",
+    wcc_method: WCCMethod = "simpson_1_3",
 ) -> PSAResult:
     """Vectorized PSA for the empagliflozin case study.
 
@@ -506,7 +504,7 @@ def _run_empa_psa_fixed_drug_price(
     p: Mapping[str, Any],
     n_sim: int,
     seed: int,
-    wcc_method: str,
+    wcc_method: WCCMethod,
     fixed_drug_price: float,
 ) -> PSAResult:
     """Sustained-effect PSA with ``c_drug`` pinned to ``fixed_drug_price``.
@@ -657,10 +655,10 @@ def _acute_cost_contribution_sequence(
 
 
 def evaluate_scenario(
-    params: Union[Mapping[str, Any], str, Path],
+    params: ParameterInput,
     drug_price: Optional[float] = None,
     waning: Optional[WaningSpec] = None,
-) -> Dict[str, Dict[str, float]]:
+) -> dict[str, CaseStrategyResult]:
     """Run the case study under a scenario.
 
     Parameters
@@ -746,7 +744,7 @@ def evaluate_scenario(
 
 
 def scenario_icer(
-    params: Union[Mapping[str, Any], str, Path],
+    params: ParameterInput,
     drug_price: Optional[float] = None,
     waning: Optional[WaningSpec] = None,
 ) -> float:
@@ -760,7 +758,7 @@ def scenario_icer(
 
 
 def breakeven_drug_price(
-    params: Union[Mapping[str, Any], str, Path],
+    params: ParameterInput,
     target_icer: float = 100_000.0,
     waning: Optional[WaningSpec] = None,
     bracket: Tuple[float, float] = (0.0, 50_000.0),
@@ -808,7 +806,7 @@ def _batched_acute_cost_sequence(
     init: np.ndarray,
     cycle_length: float,
     d_c: float,
-    wcc_method: str,
+    wcc_method: WCCMethod,
 ) -> np.ndarray:
     """Per-draw acute cost when the transition tensor is time-varying.
 
@@ -835,7 +833,7 @@ def _simulate_sequence_batched(
     cycle_length: float,
     d_c: float,
     d_e: float,
-    wcc_method: str,
+    wcc_method: WCCMethod,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Batched analogue of ``_simulate_strategy_batched`` for time-varying P.
 
@@ -858,10 +856,10 @@ def _simulate_sequence_batched(
 
 
 def run_empa_psa_scenario(
-    base_params: Union[Mapping[str, Any], str, Path],
+    base_params: ParameterInput,
     n_sim: int = 10_000,
     seed: int = 20260626,
-    wcc_method: str = "simpson_1_3",
+    wcc_method: WCCMethod = "simpson_1_3",
     drug_price: Optional[float] = None,
     waning: Optional[WaningSpec] = None,
 ) -> PSAResult:
@@ -891,6 +889,7 @@ def run_empa_psa_scenario(
         # plumbing comes from run_empa_psa via reproduced code below.
         # (We can't simply delegate because run_empa_psa samples c_drug
         # from EMPA_PSA_SPECS, which would re-center it at the WAC mean.)
+        assert drug_price is not None
         return _run_empa_psa_fixed_drug_price(
             p,
             n_sim=n_sim,
