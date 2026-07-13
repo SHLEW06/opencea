@@ -73,7 +73,8 @@ def plot_ce_plane(
     ax.yaxis.set_major_formatter(plt.FuncFormatter(_format_money))
     leg = ax.legend(loc="best", frameon=False, markerscale=2)
     for handle in leg.legend_handles:
-        handle.set_alpha(1.0)
+        if handle is not None:
+            handle.set_alpha(1.0)
     fig.tight_layout()
 
     out = Path(out_path)

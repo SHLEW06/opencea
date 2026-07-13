@@ -24,17 +24,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
+from ._types import DSAOutcome, ParameterInput
 from .builders import build_darth_sick_sicker
 from .cea import nmb as _nmb
 from .engine import run_model
 from .psa import PSA_PARAM_SPECS, DistSpec, sample_psa_params
 
-EvaluatorFn = Callable[[Mapping[str, Any]], Dict[str, Dict[str, float]]]
+EvaluatorFn = Callable[[Mapping[str, Any]], Mapping[str, DSAOutcome]]
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +142,7 @@ def compute_parameter_ranges(
 # ---------------------------------------------------------------------------
 
 
-def _eval_strategies(params: Mapping[str, Any]) -> Dict[str, Dict[str, float]]:
+def _eval_strategies(params: Mapping[str, Any]) -> dict[str, DSAOutcome]:
     """Build + run the DARTH model; return ``{name: {cost, qaly}}``."""
     model = build_darth_sick_sicker(params)
     return {
@@ -151,7 +152,7 @@ def _eval_strategies(params: Mapping[str, Any]) -> Dict[str, Dict[str, float]]:
 
 
 def _inc_nmb(
-    results: Mapping[str, Mapping[str, float]],
+    results: Mapping[str, DSAOutcome],
     comparator: str,
     baseline: str,
     wtp: float,
@@ -162,7 +163,7 @@ def _inc_nmb(
 
 
 def _optimal_comparator(
-    results: Mapping[str, Mapping[str, float]],
+    results: Mapping[str, DSAOutcome],
     baseline: str,
     wtp: float,
 ) -> str:
@@ -178,9 +179,7 @@ def _optimal_comparator(
 # ---------------------------------------------------------------------------
 
 
-def _load_base_params(
-    base_params: Union[Mapping[str, Any], str, Path],
-) -> Dict[str, Any]:
+def _load_base_params(base_params: ParameterInput) -> Dict[str, Any]:
     if isinstance(base_params, (str, Path)):
         import yaml
 
@@ -190,7 +189,7 @@ def _load_base_params(
 
 
 def run_dsa(
-    base_params: Union[Mapping[str, Any], str, Path],
+    base_params: ParameterInput,
     wtp: float = 100_000.0,
     comparator: Optional[str] = None,
     baseline: str = "Standard of care",

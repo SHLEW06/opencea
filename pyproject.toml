@@ -52,6 +52,8 @@ dev = [
     "twine>=4.0",
     "ruff>=0.15",
     "pre-commit>=3.5",
+    "mypy>=1.10",
+    "types-PyYAML>=6.0",
 ]
 
 [project.urls]
@@ -62,6 +64,9 @@ Changelog = "https://github.com/SHLEW06/opencea/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+opencea = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -84,3 +89,20 @@ source_pkgs = ["opencea"]
 # headroom so honest refactors don't fail CI on a fraction of a percent.
 fail_under = 90
 show_missing = true
+
+[tool.mypy]
+# Source remains Python 3.10 compatible. Type checking runs on the CI
+# baseline (3.12) because current NumPy stubs use Python 3.12 syntax.
+python_version = "3.12"
+files = ["src/opencea"]
+check_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["pandas"]
+# pandas does not ship inline type information. Keep this exception limited
+# to that dependency rather than suppressing missing imports project-wide.
+ignore_missing_imports = true
