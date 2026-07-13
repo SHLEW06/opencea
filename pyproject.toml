@@ -65,6 +65,9 @@ Changelog = "https://github.com/SHLEW06/opencea/blob/main/CHANGELOG.md"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+opencea = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
