@@ -15,23 +15,21 @@ References for every parameter are inline in
 ``examples/empagliflozin_t2d.yaml``; the CHEERS-structured writeup is in
 ``examples/empagliflozin_case_study.md``.
 """
+
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
-from dataclasses import dataclass
-
 from .builders import rate_to_prob
 from .engine import (
     evaluate_sequence,
     evaluate_strategy,
     gen_wcc,
-    run_model,
-    simulate_trace_sequence,
 )
 from .model import CohortModel, Strategy
 from .psa import (
@@ -39,9 +37,8 @@ from .psa import (
     PSAResult,
     _discount_weights,  # private helpers reused; the alternative would be
     _simulate_strategy_batched,  # to copy the formulas, which the user
-    sample_psa_params,             # explicitly forbade
+    sample_psa_params,  # explicitly forbade
 )
-
 
 # Strategy names — used by builders, DSA, PSA, and the test suite.
 SOC = "Standard of care"
@@ -51,12 +48,24 @@ STATES = ("EF", "PE", "D")
 EF_IDX, PE_IDX, D_IDX = 0, 1, 2
 
 EMPA_REQUIRED_KEYS = {
-    "cycle_length", "n_age_init", "n_age_max",
-    "d_c", "d_e",
-    "r_EF_PE", "r_EF_D", "r_PE_D",
-    "hr_event", "hr_death",
-    "c_drug", "c_EF", "c_PE", "c_acute_PE", "c_D",
-    "u_EF", "u_PE", "u_D",
+    "cycle_length",
+    "n_age_init",
+    "n_age_max",
+    "d_c",
+    "d_e",
+    "r_EF_PE",
+    "r_EF_D",
+    "r_PE_D",
+    "hr_event",
+    "hr_death",
+    "c_drug",
+    "c_EF",
+    "c_PE",
+    "c_acute_PE",
+    "c_D",
+    "u_EF",
+    "u_PE",
+    "u_D",
 }
 
 
@@ -64,8 +73,7 @@ def _check_params(params: Mapping[str, Any]) -> None:
     missing = EMPA_REQUIRED_KEYS - set(params)
     if missing:
         raise KeyError(
-            "Empagliflozin parameter set is missing required keys: "
-            f"{sorted(missing)}"
+            f"Empagliflozin parameter set is missing required keys: {sorted(missing)}"
         )
 
 
@@ -81,15 +89,15 @@ def _build_transition_matrix(
     return [
         [
             (1.0 - p_EF_D) * (1.0 - p_EF_PE_event),  # EF -> EF
-            (1.0 - p_EF_D) * p_EF_PE_event,          # EF -> PE
-            p_EF_D,                                  # EF -> D
+            (1.0 - p_EF_D) * p_EF_PE_event,  # EF -> PE
+            p_EF_D,  # EF -> D
         ],
         [
-            0.0,                                     # PE -> EF (no recovery)
-            1.0 - p_PE_D,                            # PE -> PE
-            p_PE_D,                                  # PE -> D
+            0.0,  # PE -> EF (no recovery)
+            1.0 - p_PE_D,  # PE -> PE
+            p_PE_D,  # PE -> D
         ],
-        [0.0, 0.0, 1.0],                             # D absorbing
+        [0.0, 0.0, 1.0],  # D absorbing
     ]
 
 
@@ -154,9 +162,7 @@ def build_empagliflozin_t2d(
     util_SoC = [u_EF, u_PE, u_D]
     util_Empa = [u_EF, u_PE, u_D]
 
-    n_cycles = int(
-        (float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length
-    )
+    n_cycles = int((float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length)
     if n_cycles <= 0:
         raise ValueError("n_age_max must exceed n_age_init")
 
@@ -208,7 +214,7 @@ def _acute_cost_contribution(
     """
     T = trace.shape[0] - 1
     entries = trace[:T, EF_IDX] * P[EF_IDX, PE_IDX]
-    weights = dw_c[1:T + 1] * wcc[1:T + 1]
+    weights = dw_c[1 : T + 1] * wcc[1 : T + 1]
     return float(np.sum(entries * weights) * c_acute_PE)
 
 
@@ -288,12 +294,12 @@ def _ln_sigma_from_ci(ucl: float, lcl: float) -> float:
 
 _HR_EVENT_SIGMA = _ln_sigma_from_ci(0.99, 0.74)  # ~ 0.0743
 _HR_DEATH_SIGMA = _ln_sigma_from_ci(0.82, 0.57)  # ~ 0.0928
-_R_PE_D_SIGMA = _ln_sigma_from_ci(0.10, 0.04)    # ~ 0.234, the wide soft band
+_R_PE_D_SIGMA = _ln_sigma_from_ci(0.10, 0.04)  # ~ 0.234, the wide soft band
 
 
 # Gamma with mean m and CV 0.25 => shape = 1/CV^2 = 16, scale = m/16.
 def _gamma_mean_cv(mean: float, cv: float = 0.25) -> Dict[str, float]:
-    shape = 1.0 / (cv ** 2)
+    shape = 1.0 / (cv**2)
     return {"shape": shape, "scale": mean / shape}
 
 
@@ -312,9 +318,9 @@ EMPA_PSA_SPECS: Dict[str, DistSpec] = {
         is_median=True,
     ),
     # Costs — gamma with 25% CV (the spec the user asked for).
-    "c_drug":     DistSpec("gamma", _gamma_mean_cv(6264.0),  target_mean=6264.0),
-    "c_EF":       DistSpec("gamma", _gamma_mean_cv(16000.0), target_mean=16000.0),
-    "c_PE":       DistSpec("gamma", _gamma_mean_cv(20000.0), target_mean=20000.0),
+    "c_drug": DistSpec("gamma", _gamma_mean_cv(6264.0), target_mean=6264.0),
+    "c_EF": DistSpec("gamma", _gamma_mean_cv(16000.0), target_mean=16000.0),
+    "c_PE": DistSpec("gamma", _gamma_mean_cv(20000.0), target_mean=20000.0),
     "c_acute_PE": DistSpec("gamma", _gamma_mean_cv(11650.0), target_mean=11650.0),
     # Utilities — beta with a + b = 100 (modest precision around the mean).
     "u_EF": DistSpec("beta", {"a": 75.0, "b": 25.0}, target_mean=0.75),
@@ -333,11 +339,11 @@ EMPA_PSA_SPECS: Dict[str, DistSpec] = {
 # we use them verbatim; the remaining parameters (PE cost, acute PE cost,
 # utilities) fall back to the PSA percentile machinery in run_dsa.
 EMPA_DSA_RANGE_OVERRIDES: Dict[str, Tuple[float, float]] = {
-    "hr_event": (0.74, 0.99),   # trial 95% CI on the composite event
-    "hr_death": (0.57, 0.82),   # trial 95% CI on all-cause mortality
-    "c_drug":   (4872.0, 7596.0),
-    "c_EF":     (13000.0, 19700.0),
-    "r_PE_D":   (0.04, 0.10),   # wide soft band (user spec)
+    "hr_event": (0.74, 0.99),  # trial 95% CI on the composite event
+    "hr_death": (0.57, 0.82),  # trial 95% CI on all-cause mortality
+    "c_drug": (4872.0, 7596.0),
+    "c_EF": (13000.0, 19700.0),
+    "r_PE_D": (0.04, 0.10),  # wide soft band (user spec)
 }
 
 
@@ -385,7 +391,7 @@ def _batched_acute_cost(
     entries = trace[:n_cycles, :, EF_IDX] * P[:, EF_IDX, PE_IDX][None, :]
     dw_c = _discount_weights(d_c, n_cycles, cycle_length)
     wcc = gen_wcc(n_cycles, method=wcc_method)
-    weights = dw_c[1:n_cycles + 1] * wcc[1:n_cycles + 1]
+    weights = dw_c[1 : n_cycles + 1] * wcc[1 : n_cycles + 1]
     return (entries * weights[:, None]).sum(axis=0) * c_acute_PE
 
 
@@ -450,12 +456,26 @@ def run_empa_psa(
     init = np.array([1.0, 0.0, 0.0], dtype=float)
 
     cost_soc_state, qaly_soc = _simulate_strategy_batched(
-        P_SoC, costs_SoC, util_SoC, init,
-        n_cycles, cycle_length, d_c, d_e, wcc_method,
+        P_SoC,
+        costs_SoC,
+        util_SoC,
+        init,
+        n_cycles,
+        cycle_length,
+        d_c,
+        d_e,
+        wcc_method,
     )
     cost_empa_state, qaly_empa = _simulate_strategy_batched(
-        P_Empa, costs_Empa, util_Empa, init,
-        n_cycles, cycle_length, d_c, d_e, wcc_method,
+        P_Empa,
+        costs_Empa,
+        util_Empa,
+        init,
+        n_cycles,
+        cycle_length,
+        d_c,
+        d_e,
+        wcc_method,
     )
 
     acute_soc = _batched_acute_cost(
@@ -504,9 +524,7 @@ def _run_empa_psa_fixed_drug_price(
     # we only need to swap in the fixed drug price by computing the
     # drug-cost differential explicitly.
     cycle_length = float(p["cycle_length"])
-    n_cycles = int(
-        (float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length
-    )
+    n_cycles = int((float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length)
     d_c = float(p["d_c"])
 
     draws = result.params
@@ -533,10 +551,16 @@ def _run_empa_psa_fixed_drug_price(
     wcc = gen_wcc(n_cycles, method=wcc_method)
     weights = dw_c * wcc  # (T+1,)
 
-    drug_spend_sampled = (alive * weights[:, None] * draws["c_drug"].to_numpy()[None, :]).sum(axis=0) * cycle_length
-    drug_spend_fixed = (alive * weights[:, None] * fixed_drug_price).sum(axis=0) * cycle_length
+    drug_spend_sampled = (
+        alive * weights[:, None] * draws["c_drug"].to_numpy()[None, :]
+    ).sum(axis=0) * cycle_length
+    drug_spend_fixed = (alive * weights[:, None] * fixed_drug_price).sum(
+        axis=0
+    ) * cycle_length
 
-    empa_costs_fixed = result.costs[EMPA].to_numpy() - drug_spend_sampled + drug_spend_fixed
+    empa_costs_fixed = (
+        result.costs[EMPA].to_numpy() - drug_spend_sampled + drug_spend_fixed
+    )
     new_costs = result.costs.copy()
     new_costs[EMPA] = empa_costs_fixed
     new_params = result.params.copy()
@@ -589,9 +613,7 @@ def _build_empa_transition_sequence(
     under treatment-effect waning. SoC is unchanged across cycles.
     """
     cycle_length = float(p["cycle_length"])
-    n_cycles = int(
-        (float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length
-    )
+    n_cycles = int((float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length)
     r_EF_PE = float(p["r_EF_PE"])
     r_EF_D = float(p["r_EF_D"])
     r_PE_D = float(p["r_PE_D"])
@@ -630,7 +652,7 @@ def _acute_cost_contribution_sequence(
     """
     T = trace.shape[0] - 1
     entries = trace[:T, EF_IDX] * P_seq[:, EF_IDX, PE_IDX]
-    weights = dw_c[1:T + 1] * wcc[1:T + 1]
+    weights = dw_c[1 : T + 1] * wcc[1 : T + 1]
     return float(np.sum(entries * weights) * c_acute_PE)
 
 
@@ -664,9 +686,7 @@ def evaluate_scenario(
 
     # --- waning case ----------------------------------------------------
     cycle_length = float(p["cycle_length"])
-    n_cycles = int(
-        (float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length
-    )
+    n_cycles = int((float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length)
     d_c = float(p["d_c"])
     d_e = float(p["d_e"])
 
@@ -679,7 +699,6 @@ def evaluate_scenario(
     P_soc = np.asarray(soc_strat.transition_matrix, dtype=float)
 
     dw_c = _discount_weights(d_c, n_cycles, cycle_length)
-    dw_e = _discount_weights(d_e, n_cycles, cycle_length)
     wcc = gen_wcc(n_cycles, method=model.wcc_method)
 
     soc_acute = _acute_cost_contribution(soc_r["trace"], P_soc, c_acute_PE, dw_c, wcc)
@@ -804,7 +823,7 @@ def _batched_acute_cost_sequence(
     entries = trace[:n_cycles, :, EF_IDX] * P_seq[:, :, EF_IDX, PE_IDX]
     dw_c = _discount_weights(d_c, n_cycles, cycle_length)
     wcc = gen_wcc(n_cycles, method=wcc_method)
-    weights = dw_c[1:n_cycles + 1] * wcc[1:n_cycles + 1]
+    weights = dw_c[1 : n_cycles + 1] * wcc[1 : n_cycles + 1]
     return (entries * weights[:, None]).sum(axis=0) * c_acute_PE
 
 
@@ -881,9 +900,7 @@ def run_empa_psa_scenario(
         )
 
     cycle_length = float(p["cycle_length"])
-    n_cycles = int(
-        (float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length
-    )
+    n_cycles = int((float(p["n_age_max"]) - float(p["n_age_init"])) / cycle_length)
     d_c = float(p["d_c"])
     d_e = float(p["d_e"])
 
@@ -894,7 +911,11 @@ def run_empa_psa_scenario(
     hr_event = draws["hr_event"].to_numpy()
     hr_death = draws["hr_death"].to_numpy()
     r_PE_D = draws["r_PE_D"].to_numpy()
-    c_drug = draws["c_drug"].to_numpy() if drug_price is None else np.full(n_sim, float(drug_price))
+    c_drug = (
+        draws["c_drug"].to_numpy()
+        if drug_price is None
+        else np.full(n_sim, float(drug_price))
+    )
     c_EF = draws["c_EF"].to_numpy()
     c_PE = draws["c_PE"].to_numpy()
     c_acute_PE = draws["c_acute_PE"].to_numpy()
@@ -911,20 +932,35 @@ def run_empa_psa_scenario(
     costs_SoC = np.column_stack([c_EF, c_PE, zero])
     util_SoC = np.column_stack([u_EF, u_PE, zero])
     cost_soc_state, qaly_soc = _simulate_strategy_batched(
-        P_SoC, costs_SoC, util_SoC, init,
-        n_cycles, cycle_length, d_c, d_e, wcc_method,
+        P_SoC,
+        costs_SoC,
+        util_SoC,
+        init,
+        n_cycles,
+        cycle_length,
+        d_c,
+        d_e,
+        wcc_method,
     )
     acute_soc = _batched_acute_cost(
-        P_SoC, c_acute_PE, init, n_cycles, cycle_length, d_c, wcc_method,
+        P_SoC,
+        c_acute_PE,
+        init,
+        n_cycles,
+        cycle_length,
+        d_c,
+        wcc_method,
     )
 
     # --- Empa: time-varying HRs ---
     t_grid = np.arange(n_cycles, dtype=float) * cycle_length
-    frac = waning.effect_fraction(t_grid)                    # (n_cycles,)
-    hr_event_t = 1.0 - frac[:, None] * (1.0 - hr_event[None, :])   # (n_cycles, n_sim)
+    frac = waning.effect_fraction(t_grid)  # (n_cycles,)
+    hr_event_t = 1.0 - frac[:, None] * (1.0 - hr_event[None, :])  # (n_cycles, n_sim)
     hr_death_t = 1.0 - frac[:, None] * (1.0 - hr_death[None, :])
 
-    p_EF_PE_empa = 1.0 - np.exp(-r_EF_PE * hr_event_t * cycle_length)  # (n_cycles, n_sim)
+    p_EF_PE_empa = 1.0 - np.exp(
+        -r_EF_PE * hr_event_t * cycle_length
+    )  # (n_cycles, n_sim)
     p_EF_D_empa = 1.0 - np.exp(-r_EF_D * hr_death_t * cycle_length)
     p_PE_D_empa = 1.0 - np.exp(-r_PE_D[None, :] * hr_death_t * cycle_length)
 
@@ -939,16 +975,29 @@ def run_empa_psa_scenario(
     costs_Empa = np.column_stack([c_EF + c_drug, c_PE + c_drug, zero])
     util_Empa = np.column_stack([u_EF, u_PE, zero])
     cost_empa_state, qaly_empa = _simulate_sequence_batched(
-        P_empa_seq, costs_Empa, util_Empa, init,
-        cycle_length, d_c, d_e, wcc_method,
+        P_empa_seq,
+        costs_Empa,
+        util_Empa,
+        init,
+        cycle_length,
+        d_c,
+        d_e,
+        wcc_method,
     )
     acute_empa = _batched_acute_cost_sequence(
-        P_empa_seq, c_acute_PE, init, cycle_length, d_c, wcc_method,
+        P_empa_seq,
+        c_acute_PE,
+        init,
+        cycle_length,
+        d_c,
+        wcc_method,
     )
 
     return PSAResult(
         params=draws,
-        costs=pd.DataFrame({SOC: cost_soc_state + acute_soc, EMPA: cost_empa_state + acute_empa}),
+        costs=pd.DataFrame(
+            {SOC: cost_soc_state + acute_soc, EMPA: cost_empa_state + acute_empa}
+        ),
         qalys=pd.DataFrame({SOC: qaly_soc, EMPA: qaly_empa}),
         strategy_names=STRATEGY_NAMES,
         n_sim=n_sim,

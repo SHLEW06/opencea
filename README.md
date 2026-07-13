@@ -128,6 +128,10 @@ tests/
 
 For build history (what was added when), see [CHANGELOG.md](CHANGELOG.md).
 
+## Contributing
+
+Development setup, the check commands (pytest, coverage, Ruff), and the ground rules for changes are in [CONTRIBUTING.md](CONTRIBUTING.md). Lint (`ruff check`), format (`ruff format --check`), and the full test suite with a coverage threshold run in CI on every push and PR.
+
 ## Roadmap
 
 OpenCEA 0.1.0 covers the deterministic engine, PSA/CEAC, DSA/tornado, and one
