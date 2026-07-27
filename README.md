@@ -12,6 +12,20 @@ figures.
 [Changelog](CHANGELOG.md) |
 [Contributing](CONTRIBUTING.md)
 
+## At a glance
+
+| Validation | Applied example | Uncertainty analysis | Supported Python |
+|---|---|---|---|
+| 124 tests, 95.86% coverage | Four empagliflozin scenarios | 10,000 seeded PSA draws | 3.10, 3.11, and 3.12 |
+
+The included case study shows how price and treatment-effect duration change
+the cost-effectiveness result at a $100,000-per-QALY threshold.
+
+![Deterministic ICERs for four empagliflozin scenarios](docs/assets/empagliflozin-scenario-icers.png)
+
+*In this illustrative model, the conclusion changes more under the waning-effect
+assumption than under the modeled price reduction.*
+
 ## What it solves
 
 Health-economic models need more than a final ICER. Reviewers also need to see
@@ -31,8 +45,6 @@ steps in one Python workflow.
 The included case study asks whether empagliflozin plus standard care is
 cost-effective for adults with type 2 diabetes and established cardiovascular
 disease at a willingness-to-pay threshold of $100,000 per QALY.
-
-![Deterministic ICERs for four empagliflozin scenarios](docs/assets/empagliflozin-scenario-icers.png)
 
 | Scenario | ICER ($/QALY) | Probability cost-effective at $100k |
 |---|---:|---:|
