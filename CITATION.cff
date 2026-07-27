@@ -12,11 +12,10 @@ type: software
 authors:
   - family-names: Lewandowski
     given-names: Shunji
-version: "0.1.0"
-date-released: "2026-07-03"
+version: "0.1.1"
 license: MIT
-repository-code: "https://github.com/SHLEW06/opencea"
-url: "https://github.com/SHLEW06/opencea"
+repository-code: "https://github.com/SHLEW06/OpenCEA"
+url: "https://github.com/SHLEW06/OpenCEA"
 keywords:
   - health-economics
   - cost-effectiveness

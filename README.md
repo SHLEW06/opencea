@@ -1,10 +1,10 @@
 # OpenCEA
 
-[![CI](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml)
+[![CI](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
 
 > Open, reproducible, Python-native health-economic decision modeling — validated against a peer-reviewed reference and used to answer a real decision question.
 
-![Cost-effectiveness acceptability curve — empagliflozin vs SoC](examples/figures/empa_ceac.png)
+![Cost-effectiveness acceptability curve: empagliflozin vs SoC](https://raw.githubusercontent.com/SHLEW06/OpenCEA/main/examples/figures/empa_ceac.png)
 
 ## What it does
 
@@ -29,36 +29,55 @@ Cohort state-transition cost-effectiveness modeling in 2026 is dominated by R-on
 | Waning effect (WAC) | 206,778 | 0.005 |
 | Waning + net price | 154,665 | 0.001 |
 
-Breakeven empagliflozin price for ICER = $100k/QALY: **$6,355/yr** under sustained effect (~1% rebate off WAC), **$2,650/yr** under waning (~58% rebate). Full CHEERS-structured writeup, parameter table with citations, and limitations: [`examples/empagliflozin_case_study.md`](examples/empagliflozin_case_study.md).
+Breakeven empagliflozin price for ICER = $100k/QALY: **$6,355/yr** under sustained effect (~1% rebate off WAC), **$2,650/yr** under waning (~58% rebate). Full CHEERS-structured writeup, parameter table with citations, and limitations: [`examples/empagliflozin_case_study.md`](https://github.com/SHLEW06/OpenCEA/blob/main/examples/empagliflozin_case_study.md).
 
 > *Disclaimer.* The case study is **illustrative**. All parameters come from publicly cited sources (EMPA-REG OUTCOME, ADA cost reports, UKPDS 62, Janssen 2022, Nicholson 2016, Red Book / JAHA 2024); none are invented. The model aggregates MI/stroke/HF into a single post-event state and uses WAC drug pricing as the base case (real US net prices are confidential).
 
-## Quickstart
+## Install and quickstart
+
+OpenCEA is not yet published on PyPI. Build and install the `0.1.1`
+release candidate from a source checkout:
 
 ```bash
-pip install opencea                     # once published; for development: pip install -e ".[dev]"
-pytest                                  # 117 tests, < 5 s on a laptop
+python -m pip install "build==1.5.0"
+python -m build
+python -m pip install dist/opencea-0.1.1-py3-none-any.whl
 ```
 
-Validated reference model (DARTH Sick-Sicker):
+After installation, this calculation runs without repository files:
 
 ```python
-from opencea import build_darth_sick_sicker, run_model, run_psa, run_dsa
-from opencea.cea import cea_table
-from opencea.plots import plot_ceac, plot_tornado
-from opencea.psa import default_wtp_grid
+from opencea import CohortModel, Strategy, run_model
 
-model = build_darth_sick_sicker("examples/sick_sicker.yaml")
-print(cea_table(run_model(model), wtp=100_000))  # reproduces manuscript Table 6
-
-psa = run_psa("examples/sick_sicker.yaml", n_sim=10_000, seed=20260625)
-plot_ceac(psa, "ceac.png", wtp_grid=default_wtp_grid())
-
-dsa = run_dsa("examples/sick_sicker.yaml", wtp=100_000)
-plot_tornado(dsa, "tornado.png")
+strategy = Strategy(
+    name="care",
+    transition_matrix=[[0.8, 0.2], [0.0, 1.0]],
+    state_costs=[100.0, 0.0],
+    state_utilities=[1.0, 0.0],
+)
+model = CohortModel(
+    states=["well", "dead"],
+    strategies=[strategy],
+    initial_distribution=[1.0, 0.0],
+    time_horizon=2,
+    discount_rate_costs=0.0,
+    discount_rate_qalys=0.0,
+    wcc_method="none",
+)
+result = run_model(model)[0]
+print(result["total_cost"], result["total_qaly"])
+# 244.0 2.4400000000000004
 ```
 
-Empagliflozin case study:
+The validated DARTH and empagliflozin examples use YAML files from a
+source checkout:
+
+```python
+from opencea import build_darth_sick_sicker, run_model
+
+model = build_darth_sick_sicker("examples/sick_sicker.yaml")
+print(run_model(model))
+```
 
 ```python
 from opencea import (
@@ -84,7 +103,11 @@ print(breakeven_drug_price(YAML, target_icer=100_000))      # 6,355 / yr
 
 ## Validation & tests
 
-**117 tests, 95% line coverage** (`pytest --cov=opencea`) run on every push to `main` and on every pull request across Python 3.10, 3.11, and 3.12 (see the [CI badge](https://github.com/SHLEW06/opencea/actions/workflows/ci.yml) at the top):
+The suite currently reports **95.86% line coverage** and enforces a 90%
+minimum. CI runs it on Python 3.10, 3.11, and 3.12. CI also checks the
+built sdist and installs the wheel in a clean environment (see the
+[CI badge](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
+at the top).
 
 - **Deterministic golden tests** pinned to the published DARTH Sick-Sicker manuscript: Table 5 totals (SoC $151,580 / 20.711, A $284,805 / 21.499, B $259,100 / 22.184, AB $378,875 / 23.137) to the cent, Table 6 ICERs (B vs SoC $72,988/QALY, AB vs B $125,764/QALY) to the dollar.
 - **PSA structural tests** — sampler reproducibility, per-parameter Monte Carlo mean recovery, PSA-mean vs deterministic Table 5 within ~1-2%, CEAC sanity at WTP extremes.
@@ -126,15 +149,15 @@ tests/
   test_empagliflozin_case.py        # case study + scenarios
 ```
 
-For build history (what was added when), see [CHANGELOG.md](CHANGELOG.md).
+For build history (what was added when), see [CHANGELOG.md](https://github.com/SHLEW06/OpenCEA/blob/main/CHANGELOG.md).
 
 ## Contributing
 
-Development setup, the check commands (pytest, coverage, Ruff), and the ground rules for changes are in [CONTRIBUTING.md](CONTRIBUTING.md). Lint (`ruff check`), format (`ruff format --check`), and the full test suite with a coverage threshold run in CI on every push and PR.
+Development setup, the check commands (pytest, coverage, Ruff), and the ground rules for changes are in [CONTRIBUTING.md](https://github.com/SHLEW06/OpenCEA/blob/main/CONTRIBUTING.md). Lint (`ruff check`), format (`ruff format --check`), and the full test suite with a coverage threshold run in CI on every push and PR.
 
 ## Roadmap
 
-OpenCEA 0.1.0 covers the deterministic engine, PSA/CEAC, DSA/tornado, and one
+OpenCEA 0.1.1 covers the deterministic engine, PSA/CEAC, DSA/tornado, and one
 applied case study. The following are **not yet implemented** and are stated
 here so the scope of the current release is unambiguous:
 
@@ -164,4 +187,4 @@ here so the scope of the current release is unambiguous:
 
 ## License
 
-MIT. Copyright (c) 2026 Shunji Lewandowski. See [LICENSE](LICENSE).
+MIT. Copyright (c) 2026 Shunji Lewandowski. See [LICENSE](https://github.com/SHLEW06/OpenCEA/blob/main/LICENSE).

@@ -21,14 +21,14 @@ jobs:
 
       - name: Install ruff
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff
+          python -m pip install --upgrade "pip==26.1.2"
+          python -m pip install "ruff==0.15.21"
 
       - name: Ruff lint
-        run: ruff check src tests
+        run: ruff check src tests examples scripts
 
       - name: Ruff format check
-        run: ruff format --check src tests
+        run: ruff format --check src tests examples scripts
 
   typecheck:
     name: mypy
@@ -46,8 +46,8 @@ jobs:
 
       - name: Install package
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m pip install --upgrade "pip==26.1.2"
+          python -m pip install -e ".[dev]"
 
       - name: Run mypy
         run: python -m mypy src/opencea
@@ -73,8 +73,8 @@ jobs:
 
       - name: Install package
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m pip install --upgrade "pip==26.1.2"
+          python -m pip install -e ".[dev]"
 
       - name: Run pytest with coverage
         # matplotlib uses the headless Agg backend (set in opencea.plots), so
@@ -82,4 +82,53 @@ jobs:
         # (fail_under) comes from [tool.coverage.report] in pyproject.toml.
         env:
           MPLBACKEND: Agg
-        run: pytest --cov=opencea
+        run: python -m pytest --cov
+
+  package:
+    name: build and validate distributions
+    needs: [lint, typecheck, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install release checks
+        run: |
+          python -m pip install --upgrade "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate metadata and archive contents
+        run: |
+          python -m twine check dist/*
+          python scripts/check_distribution.py dist
+
+      - name: Run tests from the unpacked sdist
+        env:
+          MPLBACKEND: Agg
+        run: |
+          mkdir -p "$RUNNER_TEMP/opencea-sdist"
+          tar -xzf dist/opencea-*.tar.gz -C "$RUNNER_TEMP/opencea-sdist"
+          sdist_root="$(find "$RUNNER_TEMP/opencea-sdist" -maxdepth 1 -type d -name 'opencea-*' -print -quit)"
+          test -n "$sdist_root"
+          cd "$sdist_root"
+          PYTHONPATH="$sdist_root/src" python -m pytest --cov
+
+      - name: Install and smoke-test the wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/opencea-wheel"
+          "$RUNNER_TEMP/opencea-wheel/bin/python" -m pip install --upgrade "pip==26.1.2"
+          "$RUNNER_TEMP/opencea-wheel/bin/python" -m pip install "$GITHUB_WORKSPACE"/dist/opencea-*.whl
+          "$RUNNER_TEMP/opencea-wheel/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/opencea-wheel/bin/python" "$GITHUB_WORKSPACE/examples/installed_smoke.py"
