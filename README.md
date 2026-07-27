@@ -2,189 +2,218 @@
 
 [![CI](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
 
-> Open, reproducible, Python-native health-economic decision modeling — validated against a peer-reviewed reference and used to answer a real decision question.
+OpenCEA is a typed Python library for cohort state-transition
+cost-effectiveness analysis. It turns validated model inputs into discounted
+costs and QALYs, ICERs, probabilistic sensitivity analysis, and decision
+figures.
 
-![Cost-effectiveness acceptability curve: empagliflozin vs SoC](https://raw.githubusercontent.com/SHLEW06/OpenCEA/main/examples/figures/empa_ceac.png)
+[Case study](examples/empagliflozin_case_study.md) |
+[Release checklist](docs/RELEASE_CHECKLIST.md) |
+[Changelog](CHANGELOG.md) |
+[Contributing](CONTRIBUTING.md)
 
-## What it does
+## What it solves
 
-- **Validated against the peer-reviewed DARTH Sick-Sicker reference model** — the deterministic engine reproduces the published manuscript's total discounted costs and QALYs **to the cent** (Table 5) and the published ICERs **to the dollar** (Table 6) for all four strategies.
-- **Vectorized PSA** with seeded reproducible sampling and CEAC, cost-effectiveness plane, and frontier output; **one-way DSA** with a clean tornado on incremental NMB.
-- **Applied case study** — empagliflozin vs standard of care for T2D + established CVD, anchored on EMPA-REG OUTCOME (Zinman 2015), with deterministic CEA, scenario analysis (net price, treatment-effect waning), and breakeven pricing.
+Health-economic models need more than a final ICER. Reviewers also need to see
+how model assumptions become state transitions, where uncertainty enters, and
+whether published reference results can be reproduced. OpenCEA keeps those
+steps in one Python workflow.
 
-## Why it exists
+| Contribution | Evidence in this repository |
+|---|---|
+| Validated cohort engine | Golden tests reproduce the DARTH Sick-Sicker reference model's discounted costs and QALYs to the cent and its reported ICERs to the dollar. |
+| Decision analysis | The library covers deterministic CEA, seeded PSA, CEACs, one-way DSA, tornado plots, expected-NMB frontiers, and scenario analysis. |
+| Release integrity | CI tests Python 3.10, 3.11, and 3.12, enforces a 90% coverage floor, checks types and formatting, tests the unpacked source distribution, and installs the wheel in a clean environment. |
+| Applied example | The empagliflozin case study documents public source citations for its inputs and reports the effects of price and treatment-effect waning. |
 
-Cohort state-transition cost-effectiveness modeling in 2026 is dominated by R-only stacks (heemod, hesim, dampack) and proprietary tools (TreeAge). Python — the language most data and ML teams already use — has been under-served. OpenCEA closes that gap with a transparent, vectorized, end-to-end pipeline whose every result is reproducible from a YAML parameter file and pinned to a published reference.
+## Case study result
 
-## Applied result — empagliflozin in T2D + CVD
+The included case study asks whether empagliflozin plus standard care is
+cost-effective for adults with type 2 diabetes and established cardiovascular
+disease at a willingness-to-pay threshold of $100,000 per QALY.
 
-> **Decision question:** Is empagliflozin added to standard of care cost-effective vs SoC alone for adults with T2D and established CVD at a willingness-to-pay of $100,000 / QALY, and how robust is that conclusion?
+![Deterministic ICERs for four empagliflozin scenarios](docs/assets/empagliflozin-scenario-icers.png)
 
-**Headline finding:** the cost-effectiveness of empagliflozin hinges on **the durability of the EMPA-REG all-cause mortality benefit, not on the drug price**. A typical net price (≈$4,500/yr) makes it decisively cost-effective if the trial effect persists, but no plausible rebate rescues cost-effectiveness if the effect wanes within ~10 years.
-
-| Scenario | ICER ($/QALY) | P(cost-effective at $100k) |
+| Scenario | ICER ($/QALY) | Probability cost-effective at $100k |
 |---|---:|---:|
-| Base case (WAC $6,264/yr, sustained effect) | **98,900** | **0.517** |
-| Net price (~$4,500/yr, sustained effect) | **77,564** | **0.920** |
-| Waning effect (WAC) | 206,778 | 0.005 |
-| Waning + net price | 154,665 | 0.001 |
+| WAC price ($6,264/year), sustained effect | 98,900 | 0.517 |
+| Net price ($4,500/year), sustained effect | 77,564 | 0.920 |
+| WAC price, effect wanes from year 3 to year 10 | 206,778 | 0.005 |
+| Net price, effect wanes from year 3 to year 10 | 154,665 | 0.001 |
 
-Breakeven empagliflozin price for ICER = $100k/QALY: **$6,355/yr** under sustained effect (~1% rebate off WAC), **$2,650/yr** under waning (~58% rebate). Full CHEERS-structured writeup, parameter table with citations, and limitations: [`examples/empagliflozin_case_study.md`](https://github.com/SHLEW06/OpenCEA/blob/main/examples/empagliflozin_case_study.md).
+In this illustrative three-state model, treatment-effect duration changes the
+conclusion more than the modeled price reduction from $6,264 to $4,500. The
+annual break-even price at $100,000 per QALY is $6,355 with a sustained effect
+and $2,650 with waning.
 
-> *Disclaimer.* The case study is **illustrative**. All parameters come from publicly cited sources (EMPA-REG OUTCOME, ADA cost reports, UKPDS 62, Janssen 2022, Nicholson 2016, Red Book / JAHA 2024); none are invented. The model aggregates MI/stroke/HF into a single post-event state and uses WAC drug pricing as the base case (real US net prices are confidential).
+The probability estimates use 10,000 seeded PSA draws. Run
+`python scripts/generate_readme_assets.py` to reproduce the table inputs and
+figures. The [case-study writeup](examples/empagliflozin_case_study.md) contains
+the parameter sources, methods, and full limitations.
 
-## Install and quickstart
+> The case study is an illustrative modeling exercise, not clinical or
+> reimbursement guidance. It combines myocardial infarction, stroke, and heart
+> failure in one post-event state, uses wholesale acquisition cost in the base
+> case, and extrapolates trial hazard ratios beyond the trial period.
 
-OpenCEA is not yet published on PyPI. Build and install the `0.1.1`
-release candidate from a source checkout:
+## Install from source
+
+OpenCEA 0.1.1 is a validated release candidate and is not published on PyPI.
+Install it from this repository with a supported Python version:
 
 ```bash
-python -m pip install "build==1.5.0"
-python -m build
-python -m pip install dist/opencea-0.1.1-py3-none-any.whl
+git clone https://github.com/SHLEW06/OpenCEA.git
+cd OpenCEA
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
 ```
 
-After installation, this calculation runs without repository files:
+## Five-minute example
+
+This example reproduces three values from the case-study summary:
 
 ```python
-from opencea import CohortModel, Strategy, run_model
+from pathlib import Path
 
-strategy = Strategy(
-    name="care",
-    transition_matrix=[[0.8, 0.2], [0.0, 1.0]],
-    state_costs=[100.0, 0.0],
-    state_utilities=[1.0, 0.0],
-)
-model = CohortModel(
-    states=["well", "dead"],
-    strategies=[strategy],
-    initial_distribution=[1.0, 0.0],
-    time_horizon=2,
-    discount_rate_costs=0.0,
-    discount_rate_qalys=0.0,
-    wcc_method="none",
-)
-result = run_model(model)[0]
-print(result["total_cost"], result["total_qaly"])
-# 244.0 2.4400000000000004
+from opencea import WaningSpec, breakeven_drug_price, scenario_icer
+
+params = Path("examples/empagliflozin_t2d.yaml")
+waning = WaningSpec(start_year=3, end_year=10)
+
+print(f"Base-case ICER: ${scenario_icer(params):,.0f}/QALY")
+print(f"Waning-effect ICER: ${scenario_icer(params, waning=waning):,.0f}/QALY")
+price = breakeven_drug_price(params, target_icer=100_000)
+print(f"Sustained-effect break-even price: ${price:,.0f}/year")
 ```
 
-The validated DARTH and empagliflozin examples use YAML files from a
-source checkout:
-
-```python
-from opencea import build_darth_sick_sicker, run_model
-
-model = build_darth_sick_sicker("examples/sick_sicker.yaml")
-print(run_model(model))
+```text
+Base-case ICER: $98,900/QALY
+Waning-effect ICER: $206,778/QALY
+Sustained-effect break-even price: $6,355/year
 ```
 
-```python
-from opencea import (
-    evaluate_empagliflozin_case, scenario_icer, breakeven_drug_price, WaningSpec,
-)
+For an installed-package example that does not depend on repository files, run
+`python examples/installed_smoke.py`.
 
-YAML = "examples/empagliflozin_t2d.yaml"
-print(scenario_icer(YAML))                                  # 98,900 base case
-print(scenario_icer(YAML, drug_price=4500))                 # 77,564 net price
-print(scenario_icer(YAML, waning=WaningSpec(3, 10)))        # 206,778 waning
-print(breakeven_drug_price(YAML, target_icer=100_000))      # 6,355 / yr
+## How the library fits together
+
+```mermaid
+flowchart LR
+    A["YAML or Python model inputs"] --> B["Pydantic validation"]
+    B --> C["Cohort state-transition engine"]
+    C --> D["Discounted costs and QALYs"]
+    D --> E["CEA, ICER, and NMB"]
+    C --> F["Seeded probabilistic analysis"]
+    C --> G["One-way sensitivity analysis"]
+    F --> H["CEAC, CE plane, and frontier"]
+    G --> I["Tornado plot"]
 ```
 
-## Features
+The model and engine are independent of plotting. PSA and DSA return structured
+results that can be tested or analyzed directly before any figure is rendered.
 
-- **`opencea.engine`** — cohort trace, discounting, within-cycle correction (Simpson's 1/3, half-cycle, or none). Optional time-varying transition sequence for scenarios like treatment-effect waning.
-- **`opencea.model`** — Pydantic specification with strict validation (square row-stochastic transition matrices, probabilities/utilities in [0, 1], non-negative costs, dimension consistency).
-- **`opencea.cea`** — total / incremental cost and QALY, ICER, NMB, strict dominance.
-- **`opencea.psa`** — distribution spec, seeded sampler, vectorized Monte Carlo runner, CEAC, expected-NMB frontier.
-- **`opencea.sensitivity`** — one-way DSA on incremental NMB at a chosen WTP, parameter ranges drawn from the PSA marginals, sorted-by-swing tornado output.
-- **`opencea.plots`** — headless matplotlib: CE plane, CEAC, frontier, tornado.
-- **`opencea.empagliflozin`** — applied 3-state, 2-strategy case study with scenario engine and breakeven solver.
+## Uncertainty and sensitivity
 
-## Validation & tests
+The CEAC shows how the preferred strategy changes across willingness-to-pay
+thresholds. The tornado plot shows which input ranges move incremental net
+monetary benefit the most at $100,000 per QALY.
 
-The suite currently reports **95.86% line coverage** and enforces a 90%
-minimum. CI runs it on Python 3.10, 3.11, and 3.12. CI also checks the
-built sdist and installs the wheel in a clean environment (see the
-[CI badge](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
-at the top).
+![Cost-effectiveness acceptability curve for empagliflozin and standard care](docs/assets/empagliflozin-ceac.png)
 
-- **Deterministic golden tests** pinned to the published DARTH Sick-Sicker manuscript: Table 5 totals (SoC $151,580 / 20.711, A $284,805 / 21.499, B $259,100 / 22.184, AB $378,875 / 23.137) to the cent, Table 6 ICERs (B vs SoC $72,988/QALY, AB vs B $125,764/QALY) to the dollar.
-- **PSA structural tests** — sampler reproducibility, per-parameter Monte Carlo mean recovery, PSA-mean vs deterministic Table 5 within ~1-2%, CEAC sanity at WTP extremes.
-- **DSA structural tests** — base-case consistency with the validated engine, bracketing, swing ordering.
-- **Empagliflozin case-study tests** — structural integrity, evaluator-vs-engine consistency, ICER sanity band, scenario directional checks (net-price lowers ICER; waning raises ICER), breakeven recovers the target ICER, time-varying engine sequence reduces to the validated time-homogeneous path when given identical matrices.
+![One-way sensitivity analysis of incremental net monetary benefit](docs/assets/empagliflozin-tornado.png)
 
-## Methodology & limitations
+Regenerate all README assets and their machine-readable result summary:
 
-- **Cohort, not microsimulation.** No individual heterogeneity; appropriate when patient-level second-event interactions are not the focus.
-- **Time-homogeneous baseline transitions.** Per-cycle transition matrices may vary on the empagliflozin (treatment) arm via the additive `simulate_trace_sequence` helper used for waning; the baseline path stays time-homogeneous.
-- **Discounting** follows the DARTH convention `1 / (1 + d * cycle_length) ^ t`; within-cycle correction defaults to Simpson's 1/3 to match the reference.
-- **Case study is illustrative.** See the disclaimer above and the limitations section of the writeup for full caveats (aggregated CV event state, WAC pricing, lifetime extrapolation of trial HRs, no adverse-event modeling).
-
-## Architecture
-
-```
-src/opencea/
-  model.py          # CohortModel + Strategy specs, YAML loading, validators
-  engine.py         # simulate_trace, discount weights, gen_wcc, evaluate_strategy
-                    # + simulate_trace_sequence / evaluate_sequence (additive)
-  cea.py            # cea_table, icer, nmb, strict dominance
-  builders.py       # build_darth_sick_sicker (validated reference)
-  psa.py            # DistSpec, sample_psa_params, run_psa, compute_ceac,
-                    # expected_nmb_frontier, incremental_vs_baseline
-  sensitivity.py    # run_dsa, ParameterSweep, DSAResult, range derivation
-  plots.py          # plot_ce_plane / plot_ceac / plot_ce_frontier / plot_tornado
-  empagliflozin.py  # case study + scenario engine + breakeven solver
-
-examples/
-  sick_sicker.yaml                  # DARTH reference parameters
-  empagliflozin_t2d.yaml            # case-study parameters (all cited)
-  empagliflozin_case_study.md       # CHEERS-structured writeup
-  figures/                          # rendered CEAC, tornado, CE plane, frontier
-
-tests/
-  test_darth_reference.py           # manuscript-pinned golden tests
-  test_psa.py                       # PSA + CEAC structural tests
-  test_sensitivity.py               # DSA tornado + bracketing tests
-  test_empagliflozin_case.py        # case study + scenarios
+```bash
+python -m pip install -e ".[dev]"
+python scripts/generate_readme_assets.py
 ```
 
-For build history (what was added when), see [CHANGELOG.md](https://github.com/SHLEW06/OpenCEA/blob/main/CHANGELOG.md).
+The command writes the figures and
+[`empagliflozin-results.json`](docs/assets/empagliflozin-results.json) under
+`docs/assets/`.
 
-## Contributing
+## Public API
 
-Development setup, the check commands (pytest, coverage, Ruff), and the ground rules for changes are in [CONTRIBUTING.md](https://github.com/SHLEW06/OpenCEA/blob/main/CONTRIBUTING.md). Lint (`ruff check`), format (`ruff format --check`), and the full test suite with a coverage threshold run in CI on every push and PR.
+| Module | Responsibility |
+|---|---|
+| `opencea.model` | Typed model and strategy specifications, YAML loading, and structural validation |
+| `opencea.engine` | Cohort traces, discounting, within-cycle correction, and time-varying transition sequences |
+| `opencea.cea` | Total and incremental outcomes, ICERs, NMB, and strict dominance |
+| `opencea.psa` | Seeded parameter sampling, vectorized PSA, CEACs, and expected-NMB frontiers |
+| `opencea.sensitivity` | One-way DSA and ordered parameter sweeps |
+| `opencea.plots` | Headless CE plane, CEAC, frontier, and tornado rendering |
+| `opencea.empagliflozin` | Applied case study, price scenarios, treatment-effect waning, and break-even analysis |
+
+## Validation
+
+The current suite has 124 tests and reports 95.86% line coverage. CI enforces a
+90% minimum and runs:
+
+- Ruff lint and formatting checks
+- MyPy against the typed source package
+- Pytest on Python 3.10, 3.11, and 3.12
+- Source and wheel builds with metadata and archive checks
+- The full test suite from the unpacked source distribution
+- A clean wheel installation and public-API smoke calculation
+
+The DARTH golden tests pin the reference totals for four strategies:
+
+| Strategy | Discounted cost | Discounted QALYs |
+|---|---:|---:|
+| Standard care | $151,580 | 20.711 |
+| Strategy A | $284,805 | 21.499 |
+| Strategy B | $259,100 | 22.184 |
+| Strategy AB | $378,875 | 23.137 |
+
+The tested incremental ICERs are $72,988 per QALY for Strategy B versus
+standard care and $125,764 per QALY for Strategy AB versus Strategy B. See
+[`tests/test_darth_reference.py`](tests/test_darth_reference.py) for the
+regression tolerances and source table mapping.
+
+## Methodology and limitations
+
+- OpenCEA currently models cohorts, not individual patient trajectories. It
+  does not represent patient-level heterogeneity or repeated-event history.
+- Baseline transitions are time homogeneous. The empagliflozin treatment arm
+  can use a per-cycle transition sequence for waning scenarios.
+- Discounting follows the DARTH reference convention. Simpson's one-third rule
+  is the default within-cycle correction for the validated example.
+- The applied model is intentionally compact. Its combined cardiovascular
+  event state, wholesale acquisition cost, hazard-ratio extrapolation, and
+  omitted adverse-event model limit how its outputs should be interpreted.
+
+## Release and development
+
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+- [Publishing workflow](docs/PUBLISHING.md)
+- [0.1.1 release notes](docs/release_notes_v0.1.1.md)
+- [Development guide](CONTRIBUTING.md)
+- [Citation metadata](CITATION.cff)
+
+No PyPI package, hosted documentation site, or web application is claimed for
+the current release candidate. Publishing, tagging, and release creation remain
+manual maintainer actions.
 
 ## Roadmap
 
-OpenCEA 0.1.1 covers the deterministic engine, PSA/CEAC, DSA/tornado, and one
-applied case study. The following are **not yet implemented** and are stated
-here so the scope of the current release is unambiguous:
-
-- **FastAPI backend** — a thin HTTP layer over `run_model` / `run_psa` /
-  `run_dsa` so a model spec can be posted and results streamed back as JSON.
-- **Web front end** — a Streamlit or Next.js interface for interactive
-  scenario exploration on the case study, sharing a URL to a specific
-  parameter configuration.
-- **LLM "assumption critic"** — an audit pass that reads a YAML parameter
-  file plus its citations and flags implausible / uncited / conflicting
-  assumptions before the model is run.
-- **Individual-level (microsimulation) engine** — the current engine is
-  cohort-only; a per-individual trajectory engine would let second-event
-  interactions and heterogeneous baseline risk enter the analysis.
-- **[opencea-evals](https://github.com/SHLEW06/opencea-evals)** — a
-  companion repository (planned) of published cost-effectiveness models
-  reproduced end-to-end in OpenCEA, each pinned to its manuscript totals
-  and ICERs, as a growing external validation suite beyond DARTH
-  Sick-Sicker.
+The current release covers the cohort engine, deterministic CEA, PSA and CEAC,
+one-way DSA, plotting, and the applied case study. Possible later work includes
+an HTTP API, an interactive scenario interface, individual-level simulation,
+and additional external model reproductions in
+[opencea-evals](https://github.com/SHLEW06/opencea-evals).
 
 ## Reference
 
-> Alarid-Escudero F, Krijkamp EM, Enns EA, Yang A, Hunink MGM, Pechlivanoglou P, Jalal H.
-> *An Introductory Tutorial on Cohort State-Transition Models in R Using a Cost-Effectiveness Analysis Example.*
-> Medical Decision Making, 2023; 43(1):3–20.
-> Code: <https://github.com/DARTH-git/cohort-modeling-tutorial-intro>.
+OpenCEA's golden validation case follows:
+
+> Alarid-Escudero F, Krijkamp EM, Enns EA, Yang A, Hunink MGM,
+> Pechlivanoglou P, Jalal H. *An Introductory Tutorial on Cohort
+> State-Transition Models in R Using a Cost-Effectiveness Analysis Example.*
+> Medical Decision Making. 2023;43(1):3-20.
+> [Reference code](https://github.com/DARTH-git/cohort-modeling-tutorial-intro)
 
 ## License
 
-MIT. Copyright (c) 2026 Shunji Lewandowski. See [LICENSE](https://github.com/SHLEW06/OpenCEA/blob/main/LICENSE).
+MIT. Copyright (c) 2026 Shunji Lewandowski. See [LICENSE](LICENSE).

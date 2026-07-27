@@ -1,9 +1,9 @@
 """Matplotlib figures for PSA and DSA outputs.
 
 All figures use the headless ``Agg`` backend and are saved to a file path
-chosen by the caller. The CEAC is the project's hero PSA figure — one
-probability curve per strategy across the WTP grid — and the tornado is
-the hero DSA figure.
+chosen by the caller. The CEAC is the project's main PSA figure, with one
+probability curve per strategy across the WTP grid. The tornado is the
+main DSA figure.
 
 The PSA helpers take a :class:`opencea.psa.PSAResult` and call the
 analytic helpers in :mod:`opencea.psa` so plots and tests share one
@@ -89,7 +89,7 @@ def plot_ceac(
     wtp_grid: Optional[np.ndarray] = None,
     dpi: int = 150,
 ) -> Path:
-    """Cost-effectiveness acceptability curve — the project hero figure.
+    """Cost-effectiveness acceptability curve.
 
     One probability curve per strategy across the WTP grid. Clean axes,
     labelled lines, no extraneous chrome.
@@ -289,7 +289,7 @@ def plot_tornado(
         f"Incremental NMB ({dsa_result.comparator} vs {dsa_result.baseline}) "
         f"at WTP = ${dsa_result.wtp:,.0f} / QALY (USD)"
     )
-    ax.set_title("One-way deterministic sensitivity analysis — tornado")
+    ax.set_title("One-way deterministic sensitivity analysis")
     ax.xaxis.set_major_formatter(plt.FuncFormatter(_format_money))
     ax.grid(True, axis="x", alpha=0.25)
     ax.legend(loc="lower right", frameon=False, fontsize=9)

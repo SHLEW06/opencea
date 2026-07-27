@@ -1,0 +1,48 @@
+{
+  "model": "examples/empagliflozin_t2d.yaml",
+  "seed": 20260626,
+  "psa_draws": 10000,
+  "willingness_to_pay_per_qaly": 100000.0,
+  "scenarios": [
+    {
+      "name": "wac_sustained",
+      "label": "WAC, sustained",
+      "annual_drug_price": null,
+      "waning_start_year": null,
+      "waning_end_year": null,
+      "icer_per_qaly": 98899.8063552081,
+      "probability_cost_effective": 0.5166
+    },
+    {
+      "name": "net_sustained",
+      "label": "$4,500, sustained",
+      "annual_drug_price": 4500.0,
+      "waning_start_year": null,
+      "waning_end_year": null,
+      "icer_per_qaly": 77563.64188888753,
+      "probability_cost_effective": 0.9204
+    },
+    {
+      "name": "wac_waning",
+      "label": "WAC, waning",
+      "annual_drug_price": null,
+      "waning_start_year": 3.0,
+      "waning_end_year": 10.0,
+      "icer_per_qaly": 206778.3084413506,
+      "probability_cost_effective": 0.0049
+    },
+    {
+      "name": "net_waning",
+      "label": "$4,500, waning",
+      "annual_drug_price": 4500.0,
+      "waning_start_year": 3.0,
+      "waning_end_year": 10.0,
+      "icer_per_qaly": 154664.69629232373,
+      "probability_cost_effective": 0.0009
+    }
+  ],
+  "break_even": {
+    "sustained_annual_drug_price": 6354.9041748046875,
+    "waning_annual_drug_price": 2649.6410369873047
+  }
+}

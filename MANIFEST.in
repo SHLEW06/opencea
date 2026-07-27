@@ -4,7 +4,7 @@ include CONTRIBUTING.md
 include LICENSE
 include MANIFEST.in
 include README.md
-recursive-include docs *.md
+recursive-include docs *.json *.md *.png
 recursive-include examples *.md *.png *.py *.yaml
 recursive-include scripts *.py
 recursive-include tests *.py
