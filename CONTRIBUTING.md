@@ -2,28 +2,36 @@
 
 ## Development setup
 
-Requires Python ≥ 3.10.
+Use Python 3.10, 3.11, or 3.12.
 
 ```bash
 git clone https://github.com/SHLEW06/OpenCEA.git
 cd OpenCEA
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pre-commit install          # optional but recommended
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade "pip==26.1.2"
+python -m pip install -e ".[dev]"
+pre-commit install
 ```
+
+The `dev` extra pins the direct test, lint, type, build, and publishing
+tools. Pre-commit and CI use the same Ruff version and rule set.
 
 ## Running the checks
 
 ```bash
-pytest                      # full suite (117 tests, < 5 s)
-pytest --cov=opencea        # with coverage; CI enforces the fail_under
-                            # threshold in pyproject.toml
-ruff check src tests        # lint
-ruff format src tests       # format (CI runs `ruff format --check`)
-python -m mypy src/opencea  # public API and package implementation
+python -m pytest --cov
+ruff check src tests examples scripts
+ruff format --check src tests examples scripts
+python -m mypy src/opencea
+python -m build
+python -m twine check dist/*
+python scripts/check_distribution.py dist
 ```
 
-All of these run in CI (`.github/workflows/ci.yml`) on Python 3.10–3.12; a PR must pass lint, format check, and the full test suite with coverage.
+CI runs the test suite on every supported Python version. It also tests
+the unpacked source distribution and installs the wheel in a separate
+environment before running the smoke calculation.
 
 ## Ground rules
 
@@ -34,4 +42,7 @@ All of these run in CI (`.github/workflows/ci.yml`) on Python 3.10–3.12; a PR 
 
 ## Releases
 
-Versioning is semantic. Publishing runs via PyPI Trusted Publishing on GitHub release publication (see `docs/PUBLISHING.md`); maintainers only.
+OpenCEA uses semantic versioning. Maintainers must follow
+[`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Publishing uses
+PyPI Trusted Publishing and starts only when a GitHub Release is
+published.

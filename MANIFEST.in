@@ -1,0 +1,10 @@
+include CHANGELOG.md
+include CITATION.cff
+include CONTRIBUTING.md
+include LICENSE
+include MANIFEST.in
+include README.md
+recursive-include docs *.md
+recursive-include examples *.md *.png *.py *.yaml
+recursive-include scripts *.py
+recursive-include tests *.py

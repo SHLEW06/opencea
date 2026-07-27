@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools==83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencea"
-version = "0.1.0"
+version = "0.1.1"
 description = "Open, reproducible health-economic decision modeling in Python — validated cohort state-transition CEA with PSA, DSA, CEAC, and an applied case study."
-readme = "README.md"
-requires-python = ">=3.10"
-license = { text = "MIT" }
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10,<3.13"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Shunji Lewandowski" }]
 keywords = [
     "health-economics",
@@ -26,9 +27,9 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Healthcare Industry",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -37,30 +38,33 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
-    "numpy>=1.24",
-    "pandas>=2.0",
-    "pydantic>=2.5",
-    "pyyaml>=6.0",
-    "matplotlib>=3.7",
+    "numpy>=1.24,<3",
+    "pandas>=2.0,<4",
+    "pydantic>=2.5,<3",
+    "pyyaml>=6.0,<7",
+    "matplotlib>=3.7,<4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "build>=1.0",
-    "twine>=4.0",
-    "ruff>=0.15",
-    "pre-commit>=3.5",
-    "mypy>=1.10",
-    "types-PyYAML>=6.0",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "build==1.5.0",
+    "twine==6.2.0",
+    "readme-renderer[md]==45.0",
+    "comrak==0.0.15",
+    "ruff==0.15.21",
+    "pre-commit==4.6.1",
+    "mypy==2.3.0",
+    "types-PyYAML==6.0.12.20260724",
+    "tomli==2.4.1; python_version < '3.11'",
 ]
 
 [project.urls]
-Homepage = "https://github.com/SHLEW06/opencea"
-Repository = "https://github.com/SHLEW06/opencea"
-Issues = "https://github.com/SHLEW06/opencea/issues"
-Changelog = "https://github.com/SHLEW06/opencea/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/SHLEW06/OpenCEA"
+Repository = "https://github.com/SHLEW06/OpenCEA"
+Issues = "https://github.com/SHLEW06/OpenCEA/issues"
+Changelog = "https://github.com/SHLEW06/OpenCEA/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -70,16 +74,17 @@ opencea = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v"
+addopts = "-ra"
 
 [tool.ruff]
 target-version = "py310"
-src = ["src", "tests"]
+src = ["src", "tests", "examples", "scripts"]
 
 [tool.ruff.lint]
-# Defaults (pycodestyle errors + pyflakes) plus import sorting and warnings.
-# Deliberately excludes UP/annotation rewrites until the typed-API pass.
-extend-select = ["I", "W"]
+# Keep the intended rules explicit so a Ruff default change cannot expand
+# the release gate. The exact Ruff version is pinned in the dev extra,
+# pre-commit, and CI.
+select = ["E4", "E7", "E9", "F", "I", "W"]
 
 [tool.coverage.run]
 source_pkgs = ["opencea"]
