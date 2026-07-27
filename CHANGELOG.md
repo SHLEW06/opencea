@@ -1,6 +1,24 @@
 # Project history
 
-OpenCEA was built incrementally, with each stage anchored on a validation criterion. The list below is the build sequence; see the [README](README.md) for the current capability summary and [docs/release_notes_v0.1.0.md](docs/release_notes_v0.1.0.md) for the release notes.
+OpenCEA was built incrementally, with each stage anchored on a validation criterion. The list below is the build sequence; see the [README](README.md) for the current capability summary and [docs/release_notes_v0.1.1.md](docs/release_notes_v0.1.1.md) for the current release notes.
+
+## 0.1.1 - release candidate (unreleased)
+
+This candidate contains the commits made after the local `v0.1.0` tag
+and repairs the release path without changing model calculations.
+
+- The public API includes type annotations and the wheel includes the
+  `py.typed` marker.
+- Ruff, MyPy, pytest, coverage, build, Twine, pre-commit, and pip use
+  controlled versions. Ruff uses an explicit rule set in local checks,
+  pre-commit, and CI.
+- Package metadata now uses an SPDX license expression, declares Python
+  3.10 through 3.12, and bounds runtime dependencies by major version.
+- The sdist includes the tests, YAML fixtures, examples, release
+  documents, and distribution validator needed to test it independently.
+- CI and the publishing workflow inspect both archives, test the sdist,
+  install the wheel in a clean environment, and run a self-contained
+  public API calculation before publication.
 
 ## 0.1.0 — first tagged release (2026-07-03)
 
