@@ -39,6 +39,17 @@ SEED = 20260626
 WTP = 100_000.0
 NET_PRICE = 4_500.0
 WANING = WaningSpec(start_year=3.0, end_year=10.0)
+TORNADO_PARAMETER_LABELS = {
+    "hr_death": "Mortality hazard ratio",
+    "c_drug": "Annual drug cost",
+    "hr_event": "Major CV event hazard ratio",
+    "u_EF": "Event-free utility",
+    "r_PE_D": "Post-event mortality rate",
+    "c_EF": "Event-free annual cost",
+    "c_PE": "Post-event annual cost",
+    "u_PE": "Post-event utility",
+    "c_acute_PE": "Acute event cost",
+}
 
 
 @dataclass(frozen=True)
@@ -223,6 +234,7 @@ def main() -> None:
         dsa,
         ASSET_DIR / "empagliflozin-tornado.png",
         dpi=180,
+        parameter_labels=TORNADO_PARAMETER_LABELS,
     )
     write_result_summary(
         scenarios,

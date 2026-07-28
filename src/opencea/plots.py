@@ -14,7 +14,7 @@ source of truth for NMB / CEAC values. The tornado takes a
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 import matplotlib
 
@@ -188,6 +188,7 @@ def plot_tornado(
     out_path: PathLike,
     top_n: Optional[int] = None,
     dpi: int = 150,
+    parameter_labels: Optional[Mapping[str, str]] = None,
 ) -> Path:
     """Classic CEA tornado: horizontal bars sorted by swing, centered on base.
 
@@ -204,6 +205,9 @@ def plot_tornado(
         Destination path for the PNG.
     top_n
         Optional cap on the number of parameters shown (largest swings).
+    parameter_labels
+        Optional mapping from parameter names to display labels. Parameters
+        missing from the mapping keep their original names.
     """
     sweeps = list(dsa_result.sweeps)
     if top_n is not None:
@@ -234,7 +238,7 @@ def plot_tornado(
             color=color_low,
             edgecolor="black",
             linewidth=0.4,
-            label="parameter at low value" if i == n - 1 else None,
+            label="low input value" if i == n - 1 else None,
         )
         ax.barh(
             i,
@@ -245,7 +249,7 @@ def plot_tornado(
             edgecolor="black",
             linewidth=0.4,
             alpha=0.85,
-            label="parameter at high value" if i == n - 1 else None,
+            label="high input value" if i == n - 1 else None,
         )
 
     # Annotate each bar end with the corresponding parameter value, outside
@@ -282,7 +286,8 @@ def plot_tornado(
 
     ax.axvline(base, color="black", lw=1.2)
     ax.set_yticks(np.arange(n))
-    ax.set_yticklabels([sw.parameter for sw in sweeps_plot])
+    labels = parameter_labels if parameter_labels is not None else {}
+    ax.set_yticklabels([labels.get(sw.parameter, sw.parameter) for sw in sweeps_plot])
     ax.set_xlim(xmin - 2.5 * pad, xmax + 2.5 * pad)
 
     ax.set_xlabel(
@@ -292,7 +297,7 @@ def plot_tornado(
     ax.set_title("One-way deterministic sensitivity analysis")
     ax.xaxis.set_major_formatter(plt.FuncFormatter(_format_money))
     ax.grid(True, axis="x", alpha=0.25)
-    ax.legend(loc="lower right", frameon=False, fontsize=9)
+    ax.legend(loc="lower left", frameon=False, fontsize=9)
     fig.tight_layout()
 
     out = Path(out_path)

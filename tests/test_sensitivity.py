@@ -232,3 +232,16 @@ def test_tornado_plot_top_n(dsa, tmp_path):
 
     out = plot_tornado(dsa, tmp_path / "tornado_top5.png", top_n=5)
     assert out.exists() and out.stat().st_size > 0
+
+
+def test_tornado_plot_accepts_display_labels(dsa, tmp_path):
+    """Callers can replace internal parameter names in presentation figures."""
+    from opencea.plots import plot_tornado
+
+    labels = {sweep.parameter: f"Label for {sweep.parameter}" for sweep in dsa.sweeps}
+    out = plot_tornado(
+        dsa,
+        tmp_path / "tornado_labelled.png",
+        parameter_labels=labels,
+    )
+    assert out.exists() and out.stat().st_size > 0

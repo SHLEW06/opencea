@@ -19,6 +19,10 @@ and repairs the release path without changing model calculations.
 - CI and the publishing workflow inspect both archives, test the sdist,
   install the wheel in a clean environment, and run a self-contained
   public API calculation before publication.
+- Tornado plots accept optional reader-friendly parameter labels, and the
+  public case-study figure uses them.
+- The case-study writeup distinguishes cited inputs from modeling assumptions
+  and describes uncertainty without overstating the result.
 
 ## 0.1.0 — first tagged release (2026-07-03)
 

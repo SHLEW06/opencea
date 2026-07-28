@@ -1,6 +1,10 @@
 # Empagliflozin vs Standard of Care in T2D with established CVD
 
-**Illustrative cost-effectiveness analysis** built on the validated OpenCEA engine. Every parameter is drawn from cited literature (see [`examples/empagliflozin_t2d.yaml`](empagliflozin_t2d.yaml)); no values are invented.
+This illustrative cost-effectiveness analysis runs on the validated OpenCEA
+engine. The model inputs are documented in
+[`examples/empagliflozin_t2d.yaml`](empagliflozin_t2d.yaml) with a source or
+modeling rationale. The $4,500 net-price scenario is an explicit modeling
+assumption, not an observed price.
 
 This writeup follows the CHEERS 2022 reporting structure adapted for a brief working document.
 
@@ -15,7 +19,7 @@ Is empagliflozin added to standard of care cost-effective versus standard of car
 | Comparators | Standard of care (SoC); Empagliflozin + SoC |
 | Population | Adults with T2D + established CVD, mean age 63 (EMPA-REG OUTCOME placebo arm) |
 | Perspective | US healthcare-sector (drug + medical care; non-medical costs excluded) |
-| Time horizon | Lifetime — start age 63, terminate at age 100 (37 annual cycles) |
+| Time horizon | Lifetime: start age 63, terminate at age 100 (37 annual cycles) |
 | Discount rate | 3% per year for costs and QALYs |
 | Cycle length | 1 year, Simpson's 1/3 within-cycle correction |
 | Outcome | Incremental cost / QALY (ICER); net monetary benefit at $100k / QALY; CEAC over 0-$200k / QALY |
@@ -36,11 +40,14 @@ Three health states:
                  [ D ] <----------- [ D ]
 ```
 
-- **EF** — event-free: T2D with CVD but no major CV event yet.
-- **PE** — post major CV event (composite of MI / stroke / HF hospitalization).
-- **D** — dead, absorbing.
+- **EF:** event-free, with T2D and CVD but no major CV event yet.
+- **PE:** post major CV event (a composite of MI, stroke, and HF hospitalization).
+- **D:** dead, absorbing.
 
-PE cannot recover to EF (mirroring the "Sicker" structure in the DARTH tutorial). Transition probabilities are built from annual rates via `p = 1 - exp(-r * t)` with the same competing-risks construction the engine already validates — non-death transitions are scaled by `(1 - p_death)` so each row sums to 1.
+PE cannot recover to EF, matching the "Sicker" structure in the DARTH
+tutorial. Transition probabilities are built from annual rates with
+`p = 1 - exp(-r * t)`. The engine scales non-death transitions by
+`(1 - p_death)` so each row sums to 1.
 
 The acute event cost on entering PE is implemented as a **transition cost**: discounted at the engine's `dw_c[t+1] * wcc[t+1]` weight, matching how state costs are discounted at the cycle when occupants are present.
 
@@ -50,10 +57,11 @@ The acute event cost on entering PE is implemented as a **transition cost**: dis
 
 Empagliflozin acts on the model through two independent channels, each anchored on a different EMPA-REG OUTCOME endpoint:
 
-1. **Progression channel (`HR_event = 0.86`)** — composite hazard ratio for first major CV event (`EF -> PE`). Constructed as the EMPA-REG composition-weighted blend `0.60 * 1.00 (MI/stroke, no significant trial effect) + 0.40 * 0.65 (HF hospitalization HR 0.65 [0.50-0.85])`. 95% CI for the composite ~ `[0.74, 0.99]`.
-2. **Mortality channel (`HR_death = 0.68`)** — all-cause mortality HR (95% CI `[0.57, 0.82]`, Zinman 2015). Applied to **both** `EF -> D` and `PE -> D` rates, on the assumption (per the case-study spec) that the trial-reported all-cause mortality benefit persists across both health states. *This is the assumption with the largest economic leverage* (see tornado below); a more conservative assumption that applies the HR only in EF would shift the ICER downward.
+1. **Progression channel (`HR_event = 0.86`):** composite hazard ratio for first major CV event (`EF -> PE`). Constructed as the EMPA-REG composition-weighted blend `0.60 * 1.00 (MI/stroke, no significant trial effect) + 0.40 * 0.65 (HF hospitalization HR 0.65 [0.50-0.85])`. 95% CI for the composite is approximately `[0.74, 0.99]`.
+2. **Mortality channel (`HR_death = 0.68`):** all-cause mortality HR (95% CI `[0.57, 0.82]`, Zinman 2015). The model applies it to both `EF -> D` and `PE -> D`, assuming that the trial-reported all-cause mortality benefit persists in both health states. This assumption has the largest economic leverage in the tornado analysis. Applying the HR only in EF would materially change the model and requires a separate scenario.
 
-No utility effect — empagliflozin's QALY benefit comes through event avoidance and survival, not through state-utility change.
+The model applies no separate utility effect. Empagliflozin's QALY benefit
+comes through event avoidance and survival.
 
 ---
 
@@ -83,7 +91,7 @@ PSA distributions: HRs lognormal parameterized so that `median = point estimate`
 
 | Strategy | Total cost (USD) | Total QALY | Inc cost | Inc QALY | ICER ($/QALY) | NMB @ $100k |
 |---|---:|---:|---:|---:|---:|---:|
-| Standard of care | 259,540 | 10.944 | — | — | — | 834,855 |
+| Standard of care | 259,540 | 10.944 | Not applicable | Not applicable | Not applicable | 834,855 |
 | Empagliflozin | 397,423 | 12.338 | 137,883 | 1.394 | **98,900** | 836,388 |
 
 Incremental NMB of Empa vs SoC at $100k / QALY: **$1,534** (very thin margin).
@@ -92,7 +100,7 @@ The acute event cost contributes $4,449 to SoC and $4,325 to Empa (Empa's lower 
 
 ---
 
-## One-way DSA — tornado on incremental NMB at $100k / QALY
+## One-way DSA at $100k / QALY
 
 Top 5 drivers, sorted by swing (full table in `tornado.png`):
 
@@ -104,13 +112,18 @@ Top 5 drivers, sorted by swing (full table in `tornado.png`):
 | 4 | `u_EF` | 0.66 → 0.83 | −10,632 | +13,329 | 23,961 |
 | 5 | `r_PE_D` | 0.04 → 0.10 | +12,041 | −7,943 | 19,984 |
 
-Reading: `hr_death` flips the decision (the bar straddles zero). Empa goes from clearly cost-effective at the optimistic CI bound to clearly not cost-effective at the pessimistic CI bound. The drug cost is the second-largest single lever — bringing the price down to $4,872 (FSS) makes Empa cost-effective at $100k WTP without any other change. `c_acute_PE` has near-zero swing because the difference in EF→PE flow between strategies is small.
+`hr_death` flips the decision because its bar straddles zero. Empa goes from
+cost-effective at the optimistic CI bound to not cost-effective at the
+pessimistic CI bound. Drug cost is the second-largest single lever. Lowering
+the price to $4,872 (FSS) makes Empa cost-effective at $100k WTP without any
+other change. `c_acute_PE` has near-zero swing because the difference in
+EF→PE flow between strategies is small.
 
 `hr_event` ranks third even though the composite HR is closer to 1 than `hr_death`. That is consistent with empagliflozin's CV benefit in EMPA-REG being driven more by mortality than by non-fatal events.
 
 ---
 
-## PSA — CEAC and CE plane (n_sim = 10,000)
+## PSA, CEAC, and CE plane (n_sim = 10,000)
 
 | WTP ($/QALY) | P(Empa cost-effective) |
 |---:|---:|
@@ -118,9 +131,15 @@ Reading: `hr_death` flips the decision (the bar straddles zero). Empa goes from 
 | **100,000** | **0.517** |
 | 150,000 | 0.945 |
 
-The deterministic ICER ($98,900) sits a hair below $100k WTP, so the CEAC crosses 50% almost exactly at the standard US threshold — confirming the result is genuinely on the cost-effectiveness boundary rather than safely on one side. PSA mean ICER (cost diff / qaly diff in expectation) tracks the deterministic value within ~3%.
+The deterministic ICER ($98,900) is just below $100k WTP, and the CEAC
+crosses 50% near that threshold. The result sits on the cost-effectiveness
+boundary rather than safely on one side. The PSA mean ICER (cost difference
+divided by QALY difference in expectation) is within about 3% of the
+deterministic value.
 
-The CE plane scatter (`empa_ce_plane.png`) lies almost entirely in the upper-right quadrant — Empa is dominantly more costly and more effective than SoC; the question is only whether the QALY gain is worth the spend.
+The CE plane scatter (`empa_ce_plane.png`) lies almost entirely in the
+upper-right quadrant. Empa is usually more costly and more effective than SoC;
+the decision depends on whether the QALY gain justifies the added cost.
 
 ---
 
@@ -130,8 +149,15 @@ The base case sits *right at* the $100k/QALY threshold, so the conclusion turns 
 
 ### Scenarios
 
-- **Net price** — annual drug cost lowered to **$4,500/yr**, illustrative of a typical ~28% rebate off the $6,264 WAC. *Real net prices are confidential and vary by payer*; this is a single round number, not a quotation.
-- **Treatment-effect waning** — both `hr_event` and `hr_death` are held at their trial point estimates for the first **3 years** (EMPA-REG follow-up), then linearly interpolated to **HR = 1.0 by year 10**, then no effect for the remaining 27 cycles. Implemented via a per-cycle transition-matrix sequence; the time-homogeneous engine path is untouched (a regression test confirms the sequence helper reduces to the validated `evaluate_strategy` when fed a stack of identical matrices).
+- **Net price:** annual drug cost lowered to **$4,500/yr**, an illustrative
+  ~28% rebate from the $6,264 WAC. Real net prices are confidential and vary
+  by payer; this is a round modeling assumption, not a quotation.
+- **Treatment-effect waning:** both `hr_event` and `hr_death` remain at their
+  trial point estimates for the first **3 years** (EMPA-REG follow-up), then
+  move linearly to **HR = 1.0 by year 10**. The model applies no treatment
+  effect for the remaining 27 cycles. A per-cycle transition-matrix sequence
+  implements the scenario, and a regression test confirms that identical
+  matrices reduce to the validated `evaluate_strategy` result.
 
 ### Scenario grid (n_sim = 10,000)
 
@@ -155,34 +181,53 @@ Read: under the sustained-effect base case, empagliflozin would need to come in 
 
 ### Interpretation
 
-The two assumptions move in opposite directions and the size of the move is asymmetric. The net-price scenario reduces incremental cost by roughly the discounted lifetime drug-cost differential (~$37k) and pulls the ICER 21% below the base case. Waning, in contrast, eliminates most of the long-run mortality benefit — the incremental QALY gain drops from 1.39 to about 0.49 (a ~65% reduction). Cost savings from fewer high-cost PE years partially offset this, but not enough; the waning ICER more than doubles.
+The two assumptions move in opposite directions, but not by the same amount.
+The net-price scenario reduces incremental cost by roughly the discounted
+lifetime drug-cost difference (~$37k) and puts the ICER 21% below the base
+case. Under waning, the incremental QALY gain falls from 1.39 to about 0.49,
+a reduction of roughly 65%. Cost savings from fewer high-cost PE years offset
+part of that loss, but the waning ICER still more than doubles.
 
-The combined scenario shows that **rebates alone do not rescue a waning-effect interpretation** of the trial. If the EMPA-REG mortality benefit truly persists for life, empagliflozin is cost-effective at $100k/QALY at WAC (with healthy PSA support — 52% at WAC, 92% at $4,500 net). If the mortality benefit fades within ~10 years, the drug is not cost-effective at $100k/QALY even after a ~28% rebate — and would need to drop below ~$2,650/yr to clear the threshold.
+Under the sustained-effect assumption, the deterministic result is
+cost-effective at $100k/QALY at WAC, but only 51.7% of PSA draws favor
+empagliflozin. The $4,500 net-price scenario raises that probability to 92.0%.
+If the mortality benefit fades within about 10 years, the drug is not
+cost-effective at $100k/QALY even after the modeled ~28% rebate. Its annual
+price would need to fall below roughly $2,650 to clear the threshold.
 
-The cost-effectiveness conclusion is therefore **conditional on the durability of the EMPA-REG all-cause mortality benefit, not on drug pricing**. Trial-effect durability — not the price — is the dominant uncertainty.
+The modeled conclusion is most sensitive to the durability of the EMPA-REG
+all-cause mortality benefit. Drug price still matters and is the second-largest
+driver in the one-way sensitivity analysis.
 
 ---
 
 ## Limitations
 
-The user spec explicitly framed this as an **illustrative** model. Limitations material to the result:
+This is an **illustrative** model. The following limitations are material to
+the result:
 
 1. **Aggregated event state.** MI, stroke, and HF are collapsed into a single "PE" state with a blended ongoing cost, acute cost, and utility. Published US empagliflozin CEAs in the **$26k - $88k / QALY** range typically separate these (often into 4-6 states), which yields a tighter cost ledger and different mortality trajectories for each event type.
-2. **Cohort, not microsimulation.** No individual heterogeneity, no time since first event, no second-event modeling. The 60/40 MI-stroke vs HF blend is fixed at the trial composition forever — in reality the mix would evolve with age and prior events.
-3. **Lifetime extrapolation of trial-derived HRs.** EMPA-REG OUTCOME measured outcomes over a median 3.1 years. The base case applies both HRs (`hr_event` = 0.86, `hr_death` = 0.68) for all 37 cycles. The **waning scenario** above quantifies the impact of that assumption — the deterministic ICER more than doubles, from $98,900 to $206,778/QALY, when the effect is allowed to taper to zero by year 10.
-4. **All-cause mortality HR applied to PE→D.** The trial measured HR 0.68 in the trial population (which started event-free). Applying that HR to post-event mortality is a strong assumption — the DSA shows it's the single largest driver of incremental NMB, with a tornado bar that straddles zero across the trial's 95% CI.
+2. **Cohort, not microsimulation.** No individual heterogeneity, no time since first event, no second-event modeling. The 60/40 MI-stroke vs HF blend stays fixed at the trial composition, although the mix could change with age and prior events.
+3. **Lifetime extrapolation of trial-derived HRs.** EMPA-REG OUTCOME measured outcomes over a median 3.1 years. The base case applies both HRs (`hr_event` = 0.86, `hr_death` = 0.68) for all 37 cycles. The **waning scenario** quantifies the impact of that assumption: the deterministic ICER more than doubles, from $98,900 to $206,778/QALY, when the effect tapers to zero by year 10.
+4. **All-cause mortality HR applied to PE→D.** The trial measured HR 0.68 in the trial population, which started event-free. Applying that HR to post-event mortality is a strong assumption. The DSA shows it is the largest driver of incremental NMB, with a tornado bar that straddles zero across the trial's 95% CI.
 5. **WAC drug price.** $6,264/yr is the listed wholesale price. Most US payers see meaningfully lower **net** prices after rebates; the net-price scenario above shows that a $4,500/yr price (~28% rebate) lowers the ICER to $77,564/QALY under sustained effect. Real net prices are confidential.
 6. **No adverse-event modeling.** Genital infections (the most notable EMPA-REG side effect) and DKA risk are not separately costed.
-7. **Linear time-homogeneity in baseline rates.** SoC rates do not change with age, time since diagnosis, or cumulative drug exposure. (The Empa transition matrix can vary per cycle via the additive sequence engine — used here for waning.)
+7. **Linear time-homogeneity in baseline rates.** SoC rates do not change with age, time since diagnosis, or cumulative drug exposure. The Empa transition matrix can vary by cycle through the additive sequence engine used for waning.
 
 ## Bottom line
 
 The base-case ICER ($98,900/QALY) lands at the upper end of plausibility, just below a $100k WTP. The scenario grid makes the driver of that conclusion explicit:
 
-- **If the EMPA-REG mortality benefit is sustained**, empagliflozin is cost-effective at $100k/QALY at WAC pricing (with PSA support of ~52% rising to ~92% at a $4,500 net price).
+- **If the EMPA-REG mortality benefit is sustained**, the deterministic ICER
+  is $98,900/QALY at WAC pricing. The probability of cost-effectiveness is
+  51.7% at WAC and 92.0% at the modeled $4,500 net price.
 - **If the effect wanes** (linearly to zero between years 3 and 10), the ICER rises above $200k/QALY at WAC and stays above $150k/QALY even at a $4,500 net price.
 
-The dominant uncertainty is therefore the **durability of the all-cause mortality benefit**, not drug pricing. Two structural choices distinguish this analysis from the central published $26-88k/QALY range: WAC drug pricing (relaxed in the net-price scenario) and the 3-state aggregation (left in place as an illustrative simplification).
+Within this scenario grid, the largest uncertainty is the durability of the
+all-cause mortality benefit. Drug pricing remains important. Two structural
+choices distinguish this analysis from the central published $26-88k/QALY
+range: WAC drug pricing, which the net-price scenario relaxes, and the
+three-state aggregation, which remains an illustrative simplification.
 
 ---
 
@@ -190,10 +235,10 @@ The dominant uncertainty is therefore the **durability of the all-cause mortalit
 
 Generated by the OpenCEA plotting module from the same `PSAResult` / `DSAResult` objects the tests verify. Saved to `examples/figures/`:
 
-- `empa_tornado.png` — one-way DSA tornado on incremental NMB at $100k.
-- `empa_ceac.png` — CEAC for SoC vs Empa across $0 - $200k WTP.
-- `empa_ce_plane.png` — incremental cost / QALY scatter, 10,000 draws.
-- `empa_ce_frontier.png` — expected NMB vs WTP, with optimal-strategy switch marked.
+- `empa_tornado.png`: one-way DSA tornado on incremental NMB at $100k.
+- `empa_ceac.png`: CEAC for SoC vs Empa across $0 - $200k WTP.
+- `empa_ce_plane.png`: incremental cost / QALY scatter, 10,000 draws.
+- `empa_ce_frontier.png`: expected NMB vs WTP, with the optimal-strategy switch marked.
 
 To regenerate:
 

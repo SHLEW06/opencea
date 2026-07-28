@@ -3,9 +3,9 @@
 [![CI](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml/badge.svg)](https://github.com/SHLEW06/OpenCEA/actions/workflows/ci.yml)
 
 OpenCEA is a typed Python library for cohort state-transition
-cost-effectiveness analysis. It turns validated model inputs into discounted
-costs and QALYs, ICERs, probabilistic sensitivity analysis, and decision
-figures.
+cost-effectiveness analysis. It takes validated model inputs through
+discounted costs and QALYs, ICERs, probabilistic sensitivity analysis, and
+publication-ready decision figures.
 
 [Case study](examples/empagliflozin_case_study.md) |
 [Release checklist](docs/RELEASE_CHECKLIST.md) |
@@ -16,7 +16,7 @@ figures.
 
 | Validation | Applied example | Uncertainty analysis | Supported Python |
 |---|---|---|---|
-| 124 tests, 95.86% coverage | Four empagliflozin scenarios | 10,000 seeded PSA draws | 3.10, 3.11, and 3.12 |
+| 125 tests, 95.86% coverage | Four empagliflozin scenarios | 10,000 seeded PSA draws | 3.10, 3.11, and 3.12 |
 
 The included case study shows how price and treatment-effect duration change
 the cost-effectiveness result at a $100,000-per-QALY threshold.
@@ -28,17 +28,17 @@ assumption than under the modeled price reduction.*
 
 ## What it solves
 
-Health-economic models need more than a final ICER. Reviewers also need to see
-how model assumptions become state transitions, where uncertainty enters, and
-whether published reference results can be reproduced. OpenCEA keeps those
-steps in one Python workflow.
+A health-economic model needs more than a final ICER. A reviewer should be able
+to trace assumptions into state transitions, see where uncertainty enters, and
+reproduce the reference results. OpenCEA keeps that work in one Python
+workflow.
 
 | Contribution | Evidence in this repository |
 |---|---|
 | Validated cohort engine | Golden tests reproduce the DARTH Sick-Sicker reference model's discounted costs and QALYs to the cent and its reported ICERs to the dollar. |
 | Decision analysis | The library covers deterministic CEA, seeded PSA, CEACs, one-way DSA, tornado plots, expected-NMB frontiers, and scenario analysis. |
 | Release integrity | CI tests Python 3.10, 3.11, and 3.12, enforces a 90% coverage floor, checks types and formatting, tests the unpacked source distribution, and installs the wheel in a clean environment. |
-| Applied example | The empagliflozin case study documents public source citations for its inputs and reports the effects of price and treatment-effect waning. |
+| Applied example | The empagliflozin case study documents a source or modeling rationale for each input and reports how price and treatment-effect waning change the result. |
 
 ## Case study result
 
@@ -160,7 +160,7 @@ The command writes the figures and
 
 ## Validation
 
-The current suite has 124 tests and reports 95.86% line coverage. CI enforces a
+The current suite has 125 tests and reports 95.86% line coverage. CI enforces a
 90% minimum and runs:
 
 - Ruff lint and formatting checks
